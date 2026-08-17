@@ -3,6 +3,7 @@ import { ActivityIndicator, View, StyleSheet } from 'react-native';
 
 import { brandColors } from '@/design/brand';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { isPreviewMode } from '@/features/dev/preview';
 import { onboardingSequence } from '@/features/onboarding/sequence';
 import { isSupabaseConfigured } from '@/lib/env';
 
@@ -23,7 +24,9 @@ import { isSupabaseConfigured } from '@/lib/env';
 export default function Index() {
   const { session, initialising } = useAuth();
 
-  if (!isSupabaseConfigured) return <Redirect href="/setup" />;
+  // Preview mode has no backend to configure, so the setup screen would only be
+  // in the way. It stays reachable from the preview index.
+  if (!isSupabaseConfigured && !isPreviewMode) return <Redirect href="/setup" />;
 
   if (initialising) {
     return (

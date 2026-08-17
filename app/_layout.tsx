@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '@/features/auth/AuthProvider';
 import { appFonts, colors } from '@/design';
 import { brandFonts } from '@/design/brand';
+import { PreviewPill } from '@/features/dev/PreviewPill';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -36,6 +37,8 @@ export default function RootLayout() {
             animation: 'fade',
           }}
         />
+        {/* Renders nothing unless preview mode is on, and never in a release build. */}
+        <PreviewPill />
       </AuthProvider>
     </SafeAreaProvider>
   );

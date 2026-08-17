@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-08-17 19:50 — 预览模式（不用注册就能逐屏看）
+
+- `.env.local` 里 `EXPO_PUBLIC_PREVIEW_MODE=true`（已给你打开），重启后即为"已登录"状态，
+  **不需要注册也不需要登录**。
+- 每屏右下角常驻 **PREVIEW · sample data** 药丸，点开 `/dev` 屏幕索引，7 屏一点直达
+  （含平时进不去的 Login / Sign up）。
+- 样本数据：860 Seeds / 1,240 Growth / 几条账本 / 2 个名字带 `PREVIEW` 前缀的假农场。
+- **正式包里不可能生效**：开关是 `__DEV__ && 环境变量`，`__DEV__` 在正式包恒为 false。
+- AuthProvider 只在顶部短路，其余 auth 逻辑一行没动。
+- ⚠️ 预览模式不能替代真机测试——它验排版，不验后端。
+- 详见 `updates/2026-08-17_CC_preview-mode.md`。
+
 ## 2026-08-17 19:15 — Spec B：Username 真身份/真登录 + 头像上传
 
 - **Username 接真**：新增迁移 `20260817000700`，`profiles.username` + 格式/保留字 CHECK +

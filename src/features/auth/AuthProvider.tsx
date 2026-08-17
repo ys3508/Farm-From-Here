@@ -14,6 +14,7 @@ import {
   classifyIdentifier,
   normalisePhone,
 } from './identifier';
+import { isPreviewMode, previewProfile, previewSession } from '@/features/dev/preview';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -117,6 +118,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Preview mode hands back a fixed fake account so every screen can be
+    // reviewed without signing up. Dev builds only — see src/features/dev/preview.ts.
+    if (isPreviewMode) {
+      setSession(previewSession);
+      setProfile(previewProfile);
+      setInitialising(false);
+      return;
+    }
+
     if (!isSupabaseConfigured) {
       setInitialising(false);
       return;
@@ -135,8 +145,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Profile follows the session.
+  // Profile follows the session. Skipped in preview mode, where the profile is
+  // a fixture and there is no backend to load it from.
   useEffect(() => {
+    if (isPreviewMode) return;
     if (session?.user.id) void loadProfile(session.user.id);
   }, [session?.user.id, loadProfile]);
 

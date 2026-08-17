@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { isPreviewMode, previewGrowthLedger, previewSeedsLedger } from '@/features/dev/preview';
 import { isSupabaseConfigured } from '@/lib/env';
 import { supabase } from '@/lib/supabase/client';
 import type { GrowthLedgerEntry, SeedsLedgerEntry } from '@/lib/supabase/types';
@@ -21,6 +22,13 @@ export function useLedgers(profileId: string | undefined, limit = 20) {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    if (isPreviewMode) {
+      setGrowth(previewGrowthLedger);
+      setSeeds(previewSeedsLedger);
+      setLoading(false);
+      return;
+    }
+
     if (!profileId || !isSupabaseConfigured) {
       setLoading(false);
       return;

@@ -2,6 +2,7 @@ import { Redirect, Stack } from 'expo-router';
 
 import { useAuth } from '@/features/auth/AuthProvider';
 import { onboardingSequence } from '@/features/onboarding/sequence';
+import { isPreviewMode } from '@/features/dev/preview';
 
 /**
  * Already signed in? The auth screens are not somewhere you should be.
@@ -16,7 +17,11 @@ export default function AuthLayout() {
 
   const settingUpProfile = onboardingSequence.isProfileSetupInProgress();
 
-  if (!initialising && session && !settingUpProfile) return <Redirect href="/(app)/world" />;
+  // Preview mode is always "signed in", so this redirect would make login and
+  // sign up unreachable — which is exactly what preview mode exists to avoid.
+  if (!isPreviewMode && !initialising && session && !settingUpProfile) {
+    return <Redirect href="/(app)/world" />;
+  }
 
   return <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }} />;
 }

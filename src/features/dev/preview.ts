@@ -1,0 +1,120 @@
+import type { Session } from '@supabase/supabase-js';
+
+import type { Farm, GrowthLedgerEntry, Profile, SeedsLedgerEntry } from '@/lib/supabase/types';
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * PREVIEW MODE — walk every screen without signing up.
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * Turn on by putting this in .env.local, then restarting with `npx expo start -c`:
+ *
+ *     EXPO_PUBLIC_PREVIEW_MODE=true
+ *
+ * It fakes a signed-in account with sample content so screens can be reviewed
+ * fully populated — empty states hide most layout problems.
+ *
+ * ⚠️ IT CANNOT SHIP. The gate below requires `__DEV__`, which is false in any
+ * production build, so even leaving the variable set in a release build does
+ * nothing. Every screen also shows a PREVIEW pill while it is on, so a
+ * screenshot can never be mistaken for real data.
+ *
+ * Nothing here touches real auth. AuthProvider checks this flag first and
+ * returns fixtures; every other code path is exactly as it was.
+ */
+export const isPreviewMode =
+  __DEV__ && process.env.EXPO_PUBLIC_PREVIEW_MODE === 'true';
+
+const NOW = '2026-08-17T12:00:00.000Z';
+
+/** A stand-in session. Never sent anywhere — nothing here is a valid token. */
+export const previewSession = {
+  access_token: 'preview-mode-not-a-real-token',
+  refresh_token: 'preview-mode-not-a-real-token',
+  expires_in: 3600,
+  token_type: 'bearer',
+  user: {
+    id: '00000000-0000-4000-8000-00000000a001',
+    aud: 'authenticated',
+    role: 'authenticated',
+    email: 'preview@example.com',
+    app_metadata: { provider: 'email' },
+    user_metadata: {},
+    created_at: NOW,
+  },
+} as unknown as Session;
+
+export const previewProfile: Profile = {
+  id: previewSession.user.id,
+  display_name: 'Preview Owner',
+  username: 'preview_owner',
+  avatar_url: null,
+  growth_xp: 1240,
+  seeds_balance: 860,
+  referral_code: 'PREVIEW1',
+  referred_by_code: null,
+  is_guest: false,
+  created_at: NOW,
+  updated_at: NOW,
+};
+
+/**
+ * Sample farms. Named so nobody can mistake them for signed farms — CLAUDE.md
+ * invariant 6 forbids presenting invented farm data as real, and the whole
+ * point of preview mode is that it is obviously not real.
+ */
+export const previewFarms: Farm[] = [
+  {
+    id: 'preview-farm-1',
+    name: 'PREVIEW — Willow Bend Orchard',
+    slug: 'preview-willow-bend',
+    description:
+      'Sample data for design review. Not a real farm and not under contract — this row exists only in preview mode.',
+    created_by: null,
+    latitude: 37.8044,
+    longitude: -122.2712,
+    address: 'Sample data — no real address',
+    is_active: true,
+    is_demo: true,
+    created_at: NOW,
+    updated_at: NOW,
+  },
+  {
+    id: 'preview-farm-2',
+    name: 'PREVIEW — Marsh Lane Market Garden',
+    slug: 'preview-marsh-lane',
+    description: 'Sample data for design review. Not a real farm.',
+    created_by: null,
+    latitude: 37.7599,
+    longitude: -122.4148,
+    address: 'Sample data — no real address',
+    is_active: true,
+    is_demo: true,
+    created_at: NOW,
+    updated_at: NOW,
+  },
+];
+
+export const previewGrowthLedger: GrowthLedgerEntry[] = [
+  { id: 'pg1', profile_id: previewProfile.id, amount: 100, source: 'signup', reference_id: null, metadata: null, created_at: NOW },
+  { id: 'pg2', profile_id: previewProfile.id, amount: 25, source: 'daily_movement', reference_id: null, metadata: null, created_at: NOW },
+  { id: 'pg3', profile_id: previewProfile.id, amount: 40, source: 'farm_visit', reference_id: null, metadata: null, created_at: NOW },
+];
+
+export const previewSeedsLedger: SeedsLedgerEntry[] = [
+  { id: 'ps1', profile_id: previewProfile.id, amount: 500, type: 'earn', source: 'signup_bonus', reference_id: null, metadata: null, created_at: NOW },
+  { id: 'ps2', profile_id: previewProfile.id, amount: 500, type: 'earn', source: 'referral', reference_id: null, metadata: null, created_at: NOW },
+  { id: 'ps3', profile_id: previewProfile.id, amount: -500, type: 'spend', source: 'adoption', reference_id: null, metadata: null, created_at: NOW },
+  { id: 'ps4', profile_id: previewProfile.id, amount: 25, type: 'earn', source: 'daily_movement', reference_id: null, metadata: null, created_at: NOW },
+];
+
+/** Every screen in the app, for the preview index at /dev. */
+export const PREVIEW_SCREENS: { path: string; title: string; note: string }[] = [
+  { path: '/splash', title: 'Splash', note: '3s intro. Shows "Welcome home :)" when a session exists on the device.' },
+  { path: '/(auth)/sign-in', title: 'Login', note: 'Email / username / phone in one field.' },
+  { path: '/(auth)/sign-up', title: 'Sign up', note: 'Three-step wizard. Step 2 is skipped on the third-party path.' },
+  { path: '/(app)/world', title: 'My World', note: 'The home dashboard. Live Growth and Seeds.' },
+  { path: '/(app)/map', title: 'Map', note: 'Stylised map with real distance text.' },
+  { path: '/(app)/profile', title: 'Profile', note: 'Avatar, username, referral code, sign out.' },
+  { path: '/setup', title: 'Setup', note: 'Shown when Supabase is not configured.' },
+];

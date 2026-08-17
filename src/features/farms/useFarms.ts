@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { isPreviewMode, previewFarms } from '@/features/dev/preview';
 import { isSupabaseConfigured } from '@/lib/env';
 import { supabase } from '@/lib/supabase/client';
 import type { Farm } from '@/lib/supabase/types';
@@ -18,6 +19,14 @@ export function useFarms() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    // Preview mode: sample farms so the map and My World are not empty while
+    // there is no database. Clearly labelled as samples in their own name.
+    if (isPreviewMode) {
+      setFarms(previewFarms);
+      setLoading(false);
+      return;
+    }
+
     if (!isSupabaseConfigured) {
       setLoading(false);
       return;
