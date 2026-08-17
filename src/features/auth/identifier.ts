@@ -1,28 +1,28 @@
 /**
- * The single identifier field on Login / Sign up accepts Email, Username or
- * Phone. This module works out which one was typed and routes to the right
- * existing Step 1 auth method — it adds NO new auth logic of its own.
+ * The single identifier field on Login accepts Email, Username or Phone. This
+ * module works out which one was typed.
  *
- * State of the three paths right now:
- *   email    ✅ fully wired (supabase.auth.signUp / signInWithPassword)
- *   phone    ⛔ STUB — Step 1 deliberately left SMS unwired; it costs money per
- *                message. AuthProvider.startPhoneSignIn throws a clear message.
- *   username ⛔ STUB — Supabase has no native username auth. It needs a
- *                username → email/phone lookup table, which is out of scope.
+ * The rules are fixed by spec, in this order:
+ *   contains "@"                    → email
+ *   all digits, or starts with "+"  → phone
+ *   anything else                   → username
  *
- * So of the three, only email completes today. Both stubs say so plainly rather
- * than failing in a confusing way, which is better than pretending to work.
+ * State of the three paths:
+ *   email    ✅ real
+ *   username ✅ real — resolved to an email server-side, then signed in normally
+ *   phone    ⛔ STILL A STUB. SMS was never wired (it costs money per message)
+ *              and Spec B explicitly does not connect it. Phone input is routed
+ *              to the existing stub, which says so plainly.
  */
 
 export type IdentifierKind = 'email' | 'phone' | 'username';
 
-/** Anything with an @ is an email; digits (with the usual punctuation) is a phone. */
 export function classifyIdentifier(raw: string): IdentifierKind {
   const value = raw.trim();
   if (value.includes('@')) return 'email';
 
-  const digitsOnly = value.replace(/[\s()\-.]/g, '');
-  if (/^\+?\d{6,15}$/.test(digitsOnly)) return 'phone';
+  // Digits with the punctuation people actually type, optionally led by "+".
+  if (/^\+?[\d\s()\-.]+$/.test(value) && /\d/.test(value)) return 'phone';
 
   return 'username';
 }
@@ -35,12 +35,15 @@ export function normalisePhone(raw: string): string {
 }
 
 /**
- * ⛔ USERNAME LOGIN IS A STUB.
+ * One wording for every failed sign-in, whichever of the three was typed.
  *
- * To finish it later: add a `username` column to `profiles` (unique, case-folded),
- * then a SECURITY DEFINER RPC that maps username → email so this can call the
- * existing password sign-in. Do not store passwords anywhere yourself.
+ * Saying "no such user" versus "wrong password" would let anyone test whether an
+ * account exists. (Note the real exposure right now is the username → email
+ * lookup itself — see the warning in migration 20260817000700.)
  */
-export const USERNAME_STUB_MESSAGE =
-  'Username sign-in is not connected yet — it needs a username lookup that has not been built. ' +
-  'Please use your email address for now.';
+export const SIGN_IN_FAILED_MESSAGE =
+  'Those details did not match an account. Check them and try again.';
+
+/** Shown when a username belongs to an account that has no password at all. */
+export const SOCIAL_ONLY_ACCOUNT_MESSAGE =
+  'This account signs in with Google, Facebook, X or Apple. Use "More options" below.';

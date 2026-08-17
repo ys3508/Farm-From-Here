@@ -22,6 +22,12 @@ import type {
 export type Profile = {
   id: string;
   display_name: string | null;
+  /** Public identity. Unique case-insensitively; 3–32 letters/digits/underscore. */
+  username: string | null;
+  /**
+   * Storage PATH inside the public `avatars` bucket — NOT an absolute URL.
+   * Build the URL with avatarPublicUrl() so the value survives a project move.
+   */
   avatar_url: string | null;
   /** CACHE of growth_ledger. Called "Growth" in the UI, never "XP". */
   growth_xp: number;
@@ -229,6 +235,26 @@ export type Database = {
       claim_referral_code: {
         Args: { input_code: string };
         Returns: { ok: boolean; reason?: string; seeds_awarded?: number };
+      };
+      /**
+       * True when a username is free AND passes format and reserved-word rules.
+       * SECURITY DEFINER, because RLS stops a user from reading anyone else's
+       * profile — a plain query would report every taken name as available.
+       */
+      is_username_available: {
+        Args: { candidate: string };
+        Returns: boolean;
+      };
+      /**
+       * ⚠️ Resolves a username to its account's email so username login can
+       * work. Callable before sign-in, which means anyone can turn a username
+       * into an email address. Accepted for now; see the warning block in
+       * migration 20260817000700 — this must be replaced by a server-side
+       * Edge Function before public launch.
+       */
+      email_for_username: {
+        Args: { candidate: string };
+        Returns: { found: boolean; email?: string; has_password?: boolean };
       };
     };
     Enums: Record<string, never>;

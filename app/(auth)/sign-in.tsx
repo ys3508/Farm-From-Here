@@ -13,11 +13,6 @@ import {
 } from '@/design/brand';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { ProviderButtons } from '@/features/auth/ProviderButtons';
-import {
-  USERNAME_STUB_MESSAGE,
-  classifyIdentifier,
-  normalisePhone,
-} from '@/features/auth/identifier';
 
 /**
  * LOGIN — a single screen.
@@ -30,7 +25,7 @@ import {
  */
 export default function LoginScreen() {
   const router = useRouter();
-  const { signInWithEmail, startPhoneSignIn, continueAsGuest, busy } = useAuth();
+  const { signInWithIdentifier, continueAsGuest, busy } = useAuth();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -40,21 +35,13 @@ export default function LoginScreen() {
     setError(null);
     const value = identifier.trim();
     if (!value) return setError('Enter your email, username or phone number.');
-
-    const kind = classifyIdentifier(value);
-
-    // Username is still a stub — say so before asking for a password check.
-    if (kind === 'username') return setError(USERNAME_STUB_MESSAGE);
+    if (!password) return setError('Enter your password.');
 
     try {
-      if (kind === 'phone') {
-        // Phone remains the deliberate Step 1 stub; this throws a clear message.
-        await startPhoneSignIn(normalisePhone(value));
-        return;
-      }
-
-      if (!password) return setError('Enter your password.');
-      await signInWithEmail(value, password);
+      // One call for all three kinds. It works out which was typed, resolves a
+      // username to its account, and reports failures in one shared wording so
+      // nobody can probe which accounts exist.
+      await signInWithIdentifier(value, password);
       router.replace('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not sign in. Please try again.');

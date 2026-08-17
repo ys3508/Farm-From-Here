@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import {
   BrandButton,
@@ -18,6 +18,8 @@ import { REFERRAL_REWARD_SEEDS } from '@/config/economy';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { ProviderButtons } from '@/features/auth/ProviderButtons';
 import { classifyIdentifier } from '@/features/auth/identifier';
+import { validateUsernameFormat } from '@/features/auth/username';
+import { pickAvatar, uploadAvatar } from '@/features/profile/avatar';
 import { onboardingSequence } from '@/features/onboarding/sequence';
 
 /**
@@ -42,6 +44,7 @@ export default function SignUpScreen() {
   const {
     signUpWithEmail,
     saveProfileDetails,
+    isUsernameAvailable,
     busy,
     session,
     pendingReferralCode,
@@ -57,7 +60,11 @@ export default function SignUpScreen() {
   const [confirm, setConfirm] = useState('');
   const [realName, setRealName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [avatarNotice, setAvatarNotice] = useState(false);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+
+  // Avatar is optional: chosen here, uploaded once an account exists to own it.
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarNotice, setAvatarNotice] = useState<string | null>(null);
 
   // Hold the wizard open across the third-party round trip, and let go on exit.
   useEffect(() => {
@@ -83,7 +90,7 @@ export default function SignUpScreen() {
   };
 
   // ── Step 1 ────────────────────────────────────────────────────────────────
-  const submitStep1 = () => {
+  const submitStep1 = async () => {
     setError(null);
     const value = identifier.trim();
     if (!value) return setError('Enter an email address or phone number.');
@@ -101,7 +108,20 @@ export default function SignUpScreen() {
           'Please use an email address for now.',
       );
     }
-    if (!username.trim()) return setError('Choose a username.');
+
+    // Shape first — instant and offline — then the one query that needs a round
+    // trip. The database's unique index is still the real authority; this check
+    // exists so the user is told now rather than after filling in two more steps.
+    const formatProblem = validateUsernameFormat(username);
+    if (formatProblem) return setError(formatProblem);
+
+    setCheckingUsername(true);
+    try {
+      const available = await isUsernameAvailable(username.trim());
+      if (!available) return setError('That username is taken. Please choose another.');
+    } finally {
+      setCheckingUsername(false);
+    }
 
     setStep(2);
   };
@@ -115,19 +135,54 @@ export default function SignUpScreen() {
   };
 
   // ── Step 3 ────────────────────────────────────────────────────────────────
+  const chooseAvatar = async () => {
+    setAvatarNotice(null);
+    const picked = await pickAvatar();
+    if (picked.status === 'denied') {
+      setAvatarNotice('Photo access is off. You can turn it on in Settings, or skip this.');
+      return;
+    }
+    if (picked.status === 'picked') setAvatarUri(picked.uri);
+  };
+
   const create = async () => {
     setError(null);
     if (!realName.trim()) return setError('Enter your name.');
 
     try {
+      let profileId: string | undefined;
+
       if (path === 'thirdParty') {
         // The account already exists — this fills in what the provider could not.
         await saveProfileDetails({ displayName: realName, username });
+        profileId = session?.user.id;
       } else {
-        await signUpWithEmail(identifier.trim(), password, realName, {
+        const result = await signUpWithEmail(identifier.trim(), password, realName, {
           username: username.trim() || null,
         });
+        // Only usable when signup also produced a session. With email
+        // confirmation switched on it does not, and nothing can be written on
+        // that account's behalf until they click the link.
+        profileId = result.hasSession ? (result.userId ?? undefined) : undefined;
       }
+
+      if (avatarUri && profileId) {
+        const uploaded = await uploadAvatar(profileId, avatarUri);
+        if (!uploaded.ok) {
+          // A failed photo must never cost someone their account. It is saved,
+          // they are told, and they can add the photo from their profile later.
+          setAvatarNotice(
+            `Your account is ready, but the photo did not upload: ${uploaded.message}`,
+          );
+          return; // stay put so the message is actually read
+        }
+      } else if (avatarUri && !profileId) {
+        setAvatarNotice(
+          'Your account is ready. Confirm your email, then add your photo from your profile.',
+        );
+        return;
+      }
+
       leave();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the account.');
@@ -196,7 +251,7 @@ export default function SignUpScreen() {
                   error={error ?? undefined}
                 />
 
-                <BrandButton label="Continue" onPress={submitStep1} />
+                <BrandButton label="Continue" loading={checkingUsername} onPress={submitStep1} />
 
                 <Collapsible label="— or — More options" expandedLabel="Fewer options">
                   <ProviderButtons />
@@ -240,24 +295,24 @@ export default function SignUpScreen() {
 
             {step === 3 ? (
               <>
-                {/* Avatar — UI only this round. */}
                 <View style={styles.avatarRow}>
                   <View style={styles.avatar}>
-                    <BrandText variant="title" tone="inkSoft">
-                      {(realName.trim()[0] ?? '🌱').toUpperCase()}
-                    </BrandText>
+                    {avatarUri ? (
+                      <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                    ) : (
+                      <BrandText variant="title" tone="inkSoft">
+                        {(realName.trim()[0] ?? '🌱').toUpperCase()}
+                      </BrandText>
+                    )}
                   </View>
                   <View style={styles.avatarCopy}>
-                    {/* TODO(Spec B): real upload to Supabase Storage. */}
-                    <Pressable onPress={() => setAvatarNotice(true)}>
+                    <Pressable onPress={chooseAvatar}>
                       <BrandText variant="small" weight="medium" tone="primaryDeep">
-                        Add a photo
+                        {avatarUri ? 'Choose a different photo' : 'Add a photo'}
                       </BrandText>
                     </Pressable>
                     <BrandText variant="caption" tone="inkSoft">
-                      {avatarNotice
-                        ? 'Photo upload is coming in the next update — you can skip this.'
-                        : 'Optional. You can add one later.'}
+                      {avatarNotice ?? 'Optional. You can add one later.'}
                     </BrandText>
                   </View>
                 </View>
@@ -319,6 +374,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 64,
     height: 64,
+    overflow: 'hidden',
     borderRadius: brandRadius.pill,
     backgroundColor: brandColors.bg,
     borderWidth: 1,
@@ -326,6 +382,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  avatarImage: { width: '100%', height: '100%', borderRadius: brandRadius.pill },
   avatarCopy: { flex: 1, gap: brandSpacing.xxs },
   footer: {
     flexDirection: 'row',

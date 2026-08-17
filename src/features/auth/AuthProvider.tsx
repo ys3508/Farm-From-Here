@@ -8,8 +8,29 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
 import { isSupabaseConfigured } from '@/lib/env';
 import type { Profile } from '@/lib/supabase/types';
+import {
+  SIGN_IN_FAILED_MESSAGE,
+  SOCIAL_ONLY_ACCOUNT_MESSAGE,
+  classifyIdentifier,
+  normalisePhone,
+} from './identifier';
 
 WebBrowser.maybeCompleteAuthSession();
+
+/**
+ * PHONE / SMS IS STILL A STUB.
+ *
+ * Step 1 left it unwired because SMS costs money per message, and Spec B is
+ * explicit that this round does not connect it. One message, used by both the
+ * dedicated entry point and the identifier router, so they cannot drift.
+ *
+ * To activate: enable Supabase → Providers → Phone with a Twilio account, then
+ * replace the throw with supabase.auth.signInWithOtp({ phone }) plus a verify
+ * screen.
+ */
+const PHONE_STUB_MESSAGE =
+  'Phone sign-in is not connected yet. It needs a paid SMS provider (Twilio) — ' +
+  'see .env.local.example. Use your email or username for now.';
 
 /** The four OAuth providers wired to Supabase. Apple additionally has a native path. */
 export type OAuthProvider = 'google' | 'facebook' | 'twitter' | 'apple';
@@ -25,12 +46,18 @@ type AuthContextValue = {
   pendingReferralCode: string;
   setPendingReferralCode: (code: string) => void;
 
+  /**
+   * Returns the new user's id ONLY when signup also produced a session, i.e.
+   * when email confirmation is switched off. With confirmation on there is no
+   * session yet, so the caller cannot write anything owned by that account —
+   * the avatar upload depends on knowing which.
+   */
   signUpWithEmail: (
     email: string,
     password: string,
     displayName?: string,
     extraMetadata?: Record<string, unknown>,
-  ) => Promise<void>;
+  ) => Promise<{ userId: string | null; hasSession: boolean }>;
   /**
    * Writes the profile details collected on the last step of the sign-up
    * wizard. Used by the third-party path, where the account already exists by
@@ -38,6 +65,13 @@ type AuthContextValue = {
    */
   saveProfileDetails: (details: { displayName?: string; username?: string }) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
+  /**
+   * Signs in from whatever the user typed — email, username or phone. Throws a
+   * user-facing message on failure.
+   */
+  signInWithIdentifier: (identifier: string, password: string) => Promise<void>;
+  /** True when a username is free and legal. False on any network trouble. */
+  isUsernameAvailable: (candidate: string) => Promise<boolean>;
   signInWithOAuth: (provider: OAuthProvider) => Promise<void>;
   signInWithAppleNative: () => Promise<void>;
   continueAsGuest: () => Promise<void>;
@@ -142,7 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ) => {
       setBusy(true);
       try {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -158,6 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         if (error) throw error;
         setPendingReferralCode('');
+        return { userId: data.user?.id ?? null, hasSession: !!data.session };
       } finally {
         setBusy(false);
       }
@@ -171,12 +206,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * `display_name` goes to `profiles`, which the "update own profile" RLS policy
    * already allows — no new backend.
    *
-   * ⚠️ `username` goes to auth metadata, NOT to `profiles`. There is no
-   * `profiles.username` column and adding one is a migration, which this round
-   * is explicitly not allowed to do. Storing it here keeps the value safe and
-   * in one predictable place for Spec B to migrate and enforce uniqueness on.
-   * TODO(Spec B): add profiles.username (unique, case-folded), backfill from
-   * auth.users.raw_user_meta_data->>'username', then read it from the profile.
+   * `username` goes to `profiles.username`, where a case-insensitive unique
+   * index enforces it. This path is for third-party sign-up, where a session
+   * already exists. Email sign-up has no session yet when confirmation is on,
+   * so there the username travels as auth metadata and a trigger copies it —
+   * see apply_username_from_metadata() in migration 20260817000700.
    */
   const saveProfileDetails = useCallback(
     async ({ displayName, username }: { displayName?: string; username?: string }) => {
@@ -185,20 +219,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setBusy(true);
       try {
+        const patch: { display_name?: string; username?: string } = {};
         const name = displayName?.trim();
-        if (name) {
-          const { error } = await supabase
-            .from('profiles')
-            .update({ display_name: name })
-            .eq('id', userId);
-          if (error) throw error;
-        }
-
         const handle = username?.trim();
-        if (handle) {
-          // NOT checked for uniqueness — that is Spec B's job.
-          const { error } = await supabase.auth.updateUser({ data: { username: handle } });
-          if (error) throw error;
+        if (name) patch.display_name = name;
+        if (handle) patch.username = handle;
+
+        if (Object.keys(patch).length > 0) {
+          const { error } = await supabase.from('profiles').update(patch).eq('id', userId);
+          if (error) {
+            // 23505 is a unique violation — here, always the username index.
+            if ((error as { code?: string }).code === '23505') {
+              throw new Error('That username has just been taken. Please choose another.');
+            }
+            throw error;
+          }
         }
 
         await refreshProfile();
@@ -218,6 +253,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setBusy(false);
     }
   }, []);
+
+  const isUsernameAvailable = useCallback(async (candidate: string) => {
+    const { data, error } = await supabase.rpc('is_username_available', { candidate });
+    if (error) {
+      // Do not claim a name is free when we could not check. The database's
+      // unique index is the real gate, so a false negative here is harmless.
+      console.warn('[auth] username check failed:', error.message);
+      return false;
+    }
+    return data === true;
+  }, []);
+
+  /**
+   * The three-way sign-in behind the single identifier field.
+   *
+   *   email    → straight to Supabase
+   *   username → resolved to an email, then the same call
+   *   phone    → the SMS stub, untouched by this round
+   *
+   * Every failure that could reveal whether an account exists uses one shared
+   * message. The exception is an account with no password at all, which gets a
+   * specific hint — otherwise a Google-only user retypes their password forever
+   * with no idea why it never works.
+   */
+  const signInWithIdentifier = useCallback(
+    async (identifier: string, password: string) => {
+      const value = identifier.trim();
+      const kind = classifyIdentifier(value);
+
+      if (kind === 'phone') {
+        // Still the Step 1 stub — Spec B explicitly does not connect SMS.
+        normalisePhone(value);
+        throw new Error(PHONE_STUB_MESSAGE);
+      }
+
+      let email = value;
+
+      if (kind === 'username') {
+        const { data, error } = await supabase.rpc('email_for_username', { candidate: value });
+        if (error) throw new Error(SIGN_IN_FAILED_MESSAGE);
+        if (!data?.found || !data.email) throw new Error(SIGN_IN_FAILED_MESSAGE);
+        if (!data.has_password) throw new Error(SOCIAL_ONLY_ACCOUNT_MESSAGE);
+        email = data.email;
+      }
+
+      setBusy(true);
+      try {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw new Error(SIGN_IN_FAILED_MESSAGE);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [],
+  );
 
   const signInWithOAuth = useCallback(
     async (provider: OAuthProvider) => {
@@ -303,20 +393,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  /**
-   * PHONE / SMS — DELIBERATE STUB.
-   *
-   * The UI is built (app/(auth)/phone.tsx) but the backend is not wired: SMS
-   * costs money per message and the spec says not to block Step 1 on it.
-   * To activate: enable Supabase → Providers → Phone with a Twilio account,
-   * then replace this body with supabase.auth.signInWithOtp({ phone }) plus a
-   * verifyOtp screen.
-   */
+  /** PHONE / SMS — deliberate stub. See PHONE_STUB_MESSAGE at the top of the file. */
   const startPhoneSignIn = useCallback(async (_phone: string): Promise<never> => {
-    throw new Error(
-      'Phone sign-in is not connected yet. It needs a paid SMS provider (Twilio) ' +
-        'wired to Supabase — see .env.local.example. Use email or a social login for now.',
-    );
+    throw new Error(PHONE_STUB_MESSAGE);
   }, []);
 
   const signOut = useCallback(async () => {
@@ -340,6 +419,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUpWithEmail,
       saveProfileDetails,
       signInWithEmail,
+      signInWithIdentifier,
+      isUsernameAvailable,
       signInWithOAuth,
       signInWithAppleNative,
       continueAsGuest,
@@ -356,6 +437,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUpWithEmail,
       saveProfileDetails,
       signInWithEmail,
+      signInWithIdentifier,
+      isUsernameAvailable,
       signInWithOAuth,
       signInWithAppleNative,
       continueAsGuest,

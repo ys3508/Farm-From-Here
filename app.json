@@ -49,6 +49,13 @@
         {
           "locationWhenInUsePermission": "Farm From Here uses your location only to show how far away each real farm is. Your location is never stored."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Farm From Here needs access to your photos so you can choose a profile picture.",
+          "cameraPermission": "Farm From Here needs camera access so you can take a profile picture."
+        }
       ]
     ],
     "extra": {

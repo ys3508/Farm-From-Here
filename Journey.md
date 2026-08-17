@@ -6,6 +6,22 @@
 
 ---
 
+## 2026-08-17 19:15 — Spec B：Username 真身份/真登录 + 头像上传
+
+- **Username 接真**：新增迁移 `20260817000700`，`profiles.username` + 格式/保留字 CHECK +
+  **大小写不敏感唯一索引**（表达式索引，不另开小写列）。注册表单走 `is_username_available()`
+  即时查重；邮箱注册经 metadata + 触发器写入，第三方注册直接写 profile。
+- **登录三路真路由**：login 单一输入框判别 email / username / phone。username 经
+  `email_for_username()` 换 email 再登录。失败措辞三路统一，不可枚举。
+- **头像接真**：新建公开读 `avatars` bucket，写入 RLS 限本人路径；设备端先缩放重编码
+  （1024 / 0.85 / 5MB）。复用 `profiles.avatar_url`，里面存 **path 不是 URL**。
+  profile 页可事后更换。上传失败不阻塞注册。
+- 手机 / SMS **未接**，仍是 stub。Spec A 的分步结构 / 卡片视觉 / splash **未动**。
+- ⚠️ **上线前阻塞项**：`email_for_username` 未登录即可调，任何人能用用户名查出邮箱。
+  已在迁移里大写标注，上线前须改成 Edge Function。
+- ⚠️ 唯一性 / RPC / 头像上传**都未真正执行过**——本机仍无 Supabase 项目。
+- 详见 `updates/2026-08-17_CC_username-and-avatar.md`。
+
 ## 2026-08-17 18:25 — 归档两份产品文档（无代码改动）
 
 - `revise/2026-08-17-step2-farmer-portal.md` 更新：新增农民双档 `individual` / `verified_farm`、
