@@ -66,6 +66,12 @@ export const scrim = {
    * to survive on a short phone.
    */
   revealFraction: 0.52,
+  /**
+   * Warm-white margin down each side of the illustration, as a fraction of
+   * screen width. Applied to EVERY onboarding scene so login and sign up have
+   * identical margins regardless of each painting's own aspect ratio.
+   */
+  artSideInset: 0.08,
 } as const;
 
 /** Soft, hand-drawn. 14 is the house radius; primary buttons go pill. */
