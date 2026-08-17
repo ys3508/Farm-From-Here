@@ -6,6 +6,14 @@
 
 ---
 
+## 2026-08-17 18:25 — 归档两份产品文档（无代码改动）
+
+- `revise/2026-08-17-step2-farmer-portal.md` 更新：新增农民双档 `individual` / `verified_farm`、
+  申请材料与审核路径，以及"诚实信任模型"（个体户对外称 Community grower，
+  "Verified" 只留给通过人工审核的正式农场）。注册流程不分叉。
+- `revise/2026-08-17-myworld-grove-direction-brief.md` 新增：My World / GROVE 方向简报，
+  **存档性质、未路由**，供 onboarding 收尾后拆实现 spec 用。
+
 ## 2026-08-17 18:10 — 去掉品牌字 + 两屏插画留白统一
 
 - **login 与 signup 去掉 `FARM FROM HERE` 品牌字**（只保留在 splash）。
