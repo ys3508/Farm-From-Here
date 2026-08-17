@@ -6,6 +6,22 @@
 
 ---
 
+## 2026-08-17 17:05 — Onboarding 视觉修正 + Sign up 分步重构（Spec A）
+
+- **Splash 合并成一屏两版**：删掉独立的 `welcome-back` 屏，两版共用同一张插画与动画，
+  只有那行手写字不同（新用户 `Your journey begins here` / 老用户 `Welcome home :)`），
+  统一 3s、可跳过。判断用设备本地痕迹，不发网络请求。
+- **分流**：splash 结束后已登录直接进 My World，不再经过 login。
+- **卡片下沉**：`ScrimCard` 改成从底部升起的半透明暖白纸片（顶部圆角 28、
+  插画固定露出 52%、`expo-blur` 毛玻璃、内容在卡内滚动）。login 与 signup 共用。
+- **Sign up 改成 3 步向导** + 新增 `StepProgress` 手写三段进度条。
+  第三方路径跳过密码步，进度条第 2 段显示为已完成。
+- Username 与头像**只有 UI + stub**，TODO 指向 Spec B。Username 存在 auth metadata，
+  因为 `profiles` 还没有该列且本轮不许改后端。
+- login 流程未动，只换卡片视觉。
+- 后端 / auth 路由 / referral 逻辑**未改动**。
+- 详见 `updates/2026-08-17_CC_onboarding-visual-and-signup-steps.md`。
+
 ## 2026-08-17 12:50 — 加入 Journey.md
 
 - 新增本文件，以后每轮改动记在这里。

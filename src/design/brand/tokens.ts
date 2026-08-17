@@ -53,8 +53,19 @@ export const brandColors = {
  * busy painted grass, low enough that the illustration still reads through.
  */
 export const scrim = {
-  cardBackground: 'rgba(255, 255, 255, 0.93)',
-  cardBorder: 'rgba(255, 255, 255, 0.65)',
+  /**
+   * Warm white at ~90%, not the flat white it started as. The painting has to
+   * read faintly through the sheet; at full opacity the card reads as a form
+   * pasted over the art rather than resting on it.
+   */
+  cardBackground: 'rgba(247, 244, 236, 0.90)',
+  cardBorder: 'rgba(255, 255, 255, 0.7)',
+  /**
+   * Fraction of the screen the illustration keeps above the card. 0.52 sits in
+   * the 50–55% the design calls for: enough for the clouds and the running dog
+   * to survive on a short phone.
+   */
+  revealFraction: 0.52,
 } as const;
 
 /** Soft, hand-drawn. 14 is the house radius; primary buttons go pill. */
@@ -62,6 +73,8 @@ export const brandRadius = {
   sm: 8,
   md: 14,
   lg: 20,
+  /** Top corners of the risen sheet — larger than `md`, to read as lifted paper. */
+  sheet: 28,
   pill: 999,
 } as const;
 

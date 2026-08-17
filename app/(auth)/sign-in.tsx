@@ -1,13 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -26,16 +19,13 @@ import {
   classifyIdentifier,
   normalisePhone,
 } from '@/features/auth/identifier';
-import { onboardingSequence } from '@/features/onboarding/sequence';
 
 /**
- * SCREEN 1 — LOGIN.
+ * LOGIN — still a single screen. Only the card visual changed this round: the
+ * sheet now rises from the bottom and lets the painting breathe above it.
  *
- * Full-bleed illustration with a translucent white card wrapping ONLY the input
- * area, so the grass and clouds stay visible around it.
- *
- * All auth here reuses Step 1's existing logic untouched — this screen only
- * decides WHICH existing method to call based on what the user typed.
+ * All auth reuses Step 1's logic untouched; this screen only decides WHICH
+ * existing method to call from what the user typed.
  */
 export default function LoginScreen() {
   const router = useRouter();
@@ -46,17 +36,6 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Someone who just authenticated should land in the app, not be shown the
-   * "Welcome Back" scene one second after typing their password. Marking it
-   * played here makes that deterministic rather than a race between this
-   * redirect and the one in (auth)/_layout.
-   */
-  const enterApp = () => {
-    onboardingSequence.markWelcomePlayed();
-    router.replace('/');
-  };
-
   const submit = async () => {
     setError(null);
     const value = identifier.trim();
@@ -64,19 +43,19 @@ export default function LoginScreen() {
 
     const kind = classifyIdentifier(value);
 
-    // Username is a stub; say so before asking for a password to be checked.
+    // Username is still a stub — say so before asking for a password check.
     if (kind === 'username') return setError(USERNAME_STUB_MESSAGE);
 
     try {
       if (kind === 'phone') {
-        // Phone remains a deliberate Step 1 stub — this throws a clear message.
+        // Phone remains the deliberate Step 1 stub; this throws a clear message.
         await startPhoneSignIn(normalisePhone(value));
         return;
       }
 
       if (!password) return setError('Enter your password.');
       await signInWithEmail(value, password);
-      enterApp();
+      router.replace('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not sign in. Please try again.');
     }
@@ -85,7 +64,7 @@ export default function LoginScreen() {
   const guest = async () => {
     try {
       await continueAsGuest();
-      enterApp();
+      router.replace('/');
     } catch (err) {
       Alert.alert(
         'Could not continue as a guest',
@@ -100,15 +79,9 @@ export default function LoginScreen() {
         style={styles.fill}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { paddingTop: insets.top + brandSpacing.xxl, paddingBottom: insets.bottom + brandSpacing.xl },
-          ]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.header}>
+        <View style={[styles.stage, { paddingTop: insets.top }]}>
+          {/* Wordmark sits on the illustration, just above the sheet. */}
+          <View style={styles.brand}>
             <BrandText family="display" weight="light" variant="wordmark" onImage center>
               FARM FROM HERE
             </BrandText>
@@ -164,7 +137,7 @@ export default function LoginScreen() {
               />
             </View>
           </ScrimCard>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SceneBackground>
   );
@@ -172,13 +145,10 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  content: {
-    flexGrow: 1,
-    justifyContent: 'flex-end',
-    paddingHorizontal: brandSpacing.lg,
-    gap: brandSpacing.xl,
-  },
-  header: { alignItems: 'center' },
+  // Everything is pushed to the bottom so the sheet rises from the edge and the
+  // painting keeps the top half of the screen.
+  stage: { flex: 1, justifyContent: 'flex-end' },
+  brand: { alignItems: 'center', paddingBottom: brandSpacing.lg },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -22,19 +22,16 @@ export type SceneTimings = {
   exit: number;
 };
 
+/**
+ * 3s total, for BOTH the new-user and returning-user splash. The two versions
+ * differ by one line of text and nothing else — same illustration, same rhythm,
+ * same placement (owner, 2026-08-17).
+ */
 export const SPLASH_TIMINGS: SceneTimings = {
-  title: 500,
-  subtitle: 1200,
-  script: 2200,
-  exit: 3500,
-};
-
-/** Returning users get the same sequence, compressed. */
-export const WELCOME_TIMINGS: SceneTimings = {
-  title: 200,
-  subtitle: 700,
-  script: 1200,
-  exit: 2000,
+  title: 400,
+  subtitle: 1000,
+  script: 1800,
+  exit: 3000,
 };
 
 const FADE_IN_MS = 700;
@@ -42,8 +39,16 @@ const FADE_OUT_MS = 450;
 
 export type CinematicSceneProps = {
   scene: SceneName;
-  /** The handwritten line. Splash: "Your journey begins here". */
-  scriptLine: string;
+  /**
+   * The handwritten line — the ONLY thing that differs between the new-user and
+   * returning-user splash.
+   *
+   * `null` renders nothing, for the brief moment before we have read local
+   * storage to find out which line to show. It resolves in a millisecond or
+   * two and the line does not fade in until 1.8s, so no one ever sees a gap —
+   * but this way nobody sees the wrong line flash either.
+   */
+  scriptLine: string | null;
   timings: SceneTimings;
   /** Called once, after the fade-out completes or the user taps to skip. */
   onFinish: () => void;
@@ -152,9 +157,11 @@ export function CinematicScene({ scene, scriptLine, timings, onFinish }: Cinemat
 
             <View style={[styles.bottom, { paddingBottom: insets.bottom + brandSpacing.xxl }]}>
               <Animated.View style={{ opacity: script }}>
-                <BrandText family="script" variant="script" onImage center>
-                  {scriptLine}
-                </BrandText>
+                {scriptLine ? (
+                  <BrandText family="script" variant="script" onImage center>
+                    {scriptLine}
+                  </BrandText>
+                ) : null}
               </Animated.View>
             </View>
           </Pressable>

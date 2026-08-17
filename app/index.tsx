@@ -9,19 +9,16 @@ import { isSupabaseConfigured } from '@/lib/env';
 /**
  * Route gate.
  *
- *   not configured        → setup instructions
- *   restoring session     → spinner
- *   signed in,  1st time  → welcome-back scene (~2s) → My World
- *   signed in,  after     → My World
- *   signed out, 1st time  → splash scene (~3.5s) → login
- *   signed out, after     → login
+ *   not configured      → setup instructions
+ *   restoring session   → spinner
+ *   splash not yet seen → splash (3s, once per launch, both user types)
+ *   signed in           → My World, never through login
+ *   signed out          → login
  *
- * "First time" means first time THIS LAUNCH. A returning user sees the short
- * welcome scene once and is never made to sit through the long splash.
- *
- * Someone who just signed in on the login screen does not pass through here at
- * all — (auth)/_layout sends them straight to My World, which is right: you do
- * not need welcoming back one second after typing your password.
+ * The splash plays first for everyone; it just says something different to a
+ * returning visitor. The signed-in/signed-out branch below is what actually
+ * routes, and it reads the real session rather than the local trace the splash
+ * used to pick its wording.
  */
 export default function Index() {
   const { session, initialising } = useAuth();
@@ -36,19 +33,9 @@ export default function Index() {
     );
   }
 
-  if (session) {
-    return onboardingSequence.hasPlayedWelcome() ? (
-      <Redirect href="/(app)/world" />
-    ) : (
-      <Redirect href="/welcome-back" />
-    );
-  }
+  if (!onboardingSequence.hasPlayedSplash()) return <Redirect href="/splash" />;
 
-  return onboardingSequence.hasPlayedSplash() ? (
-    <Redirect href="/(auth)/sign-in" />
-  ) : (
-    <Redirect href="/splash" />
-  );
+  return session ? <Redirect href="/(app)/world" /> : <Redirect href="/(auth)/sign-in" />;
 }
 
 const styles = StyleSheet.create({
