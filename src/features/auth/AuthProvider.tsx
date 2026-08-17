@@ -104,6 +104,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   referralRef.current = pendingReferralCode;
 
   const loadProfile = useCallback(async (userId: string) => {
+    // In preview mode the profile IS the fixture. Without this guard, anything
+    // that refreshes it — pull-to-refresh, saving a profile detail — queries the
+    // placeholder backend, gets nothing back, and wipes the sample account to
+    // zeroes while the ledger fixtures stay put.
+    if (isPreviewMode) {
+      setProfile(previewProfile);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
