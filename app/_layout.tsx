@@ -7,11 +7,15 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/features/auth/AuthProvider';
 import { appFonts, colors } from '@/design';
+import { brandFonts } from '@/design/brand';
 
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts(appFonts);
+  // Both sets load together: onboarding uses the brand faces (Cormorant / Inter
+  // / Dancing Script) while the not-yet-reskinned screens still use Fraunces and
+  // Nunito. `appFonts` retires when the last screen migrates to the brand system.
+  const [fontsLoaded, fontError] = useFonts({ ...appFonts, ...brandFonts });
 
   useEffect(() => {
     // Hide the splash once type is ready — text popping from a fallback face to

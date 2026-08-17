@@ -1,13 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -19,6 +12,7 @@ import {
   ScrimCard,
   brandSpacing,
 } from '@/design/brand';
+import { REFERRAL_REWARD_SEEDS } from '@/config/economy';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { ProviderButtons } from '@/features/auth/ProviderButtons';
 import {
@@ -29,73 +23,65 @@ import {
 import { onboardingSequence } from '@/features/onboarding/sequence';
 
 /**
- * SCREEN 1 — LOGIN.
+ * SCREEN 2 — SIGN UP.
  *
- * Full-bleed illustration with a translucent white card wrapping ONLY the input
- * area, so the grass and clouds stay visible around it.
+ * Same scrim-card treatment as Login, on the signup illustration.
  *
- * All auth here reuses Step 1's existing logic untouched — this screen only
- * decides WHICH existing method to call based on what the user typed.
+ * The referral row sits at the TOP of the card and is COLLAPSED by default:
+ * someone who has a code finds it immediately, and someone who does not is
+ * never led to think a code is required.
+ *
+ * The reward itself is Step 1 logic, untouched: 500 Seeds to each side, written
+ * through seeds_ledger, and granted only once signup actually completes —
+ * entering a code here does nothing on its own.
  */
-export default function LoginScreen() {
+export default function SignUpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signInWithEmail, startPhoneSignIn, continueAsGuest, busy } = useAuth();
+  const { signUpWithEmail, startPhoneSignIn, busy, pendingReferralCode, setPendingReferralCode } =
+    useAuth();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  /**
-   * Someone who just authenticated should land in the app, not be shown the
-   * "Welcome Back" scene one second after typing their password. Marking it
-   * played here makes that deterministic rather than a race between this
-   * redirect and the one in (auth)/_layout.
-   */
-  const enterApp = () => {
-    onboardingSequence.markWelcomePlayed();
-    router.replace('/');
-  };
+  const [notice, setNotice] = useState<string | null>(null);
 
   const submit = async () => {
     setError(null);
+    setNotice(null);
+
     const value = identifier.trim();
-    if (!value) return setError('Enter your email, username or phone number.');
+    if (!value) return setError('Enter an email, username or phone number.');
 
     const kind = classifyIdentifier(value);
-
-    // Username is a stub; say so before asking for a password to be checked.
     if (kind === 'username') return setError(USERNAME_STUB_MESSAGE);
 
     try {
       if (kind === 'phone') {
-        // Phone remains a deliberate Step 1 stub — this throws a clear message.
         await startPhoneSignIn(normalisePhone(value));
         return;
       }
 
-      if (!password) return setError('Enter your password.');
-      await signInWithEmail(value, password);
-      enterApp();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not sign in. Please try again.');
-    }
-  };
+      if (password.length < 8) return setError('Password must be at least 8 characters.');
+      if (password !== confirm) return setError('The two passwords do not match.');
 
-  const guest = async () => {
-    try {
-      await continueAsGuest();
-      enterApp();
-    } catch (err) {
-      Alert.alert(
-        'Could not continue as a guest',
-        err instanceof Error ? err.message : 'Please try again.',
+      await signUpWithEmail(value, password);
+      setNotice(
+        'Account created. If email confirmation is switched on for this project, tap the link we ' +
+          'just sent you. Your Growth, Seeds and any referral reward are granted the moment the ' +
+          'account exists.',
       );
+      // Straight into the app — a brand-new user is not "back".
+      onboardingSequence.markWelcomePlayed();
+      router.replace('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create the account. Please try again.');
     }
   };
 
   return (
-    <SceneBackground scene="login">
+    <SceneBackground scene="signup">
       <KeyboardAvoidingView
         style={styles.fill}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -116,8 +102,21 @@ export default function LoginScreen() {
 
           <ScrimCard>
             <BrandText family="display" variant="title" center>
-              Welcome back
+              Create your account
             </BrandText>
+
+            {/* Top of the card, collapsed by default. */}
+            <Collapsible label="Have a referral code?" expandedLabel="Referral code">
+              <BrandField
+                placeholder="e.g. K7QW2MPD"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={12}
+                value={pendingReferralCode}
+                onChangeText={(text) => setPendingReferralCode(text.toUpperCase())}
+                hint={`You both get ${REFERRAL_REWARD_SEEDS} Seeds once your signup is finished.`}
+              />
+            </Collapsible>
 
             <BrandField
               placeholder="Email, username or phone"
@@ -132,34 +131,41 @@ export default function LoginScreen() {
               placeholder="Password"
               secureTextEntry
               autoCapitalize="none"
-              autoComplete="current-password"
+              autoComplete="new-password"
               value={password}
               onChangeText={setPassword}
+            />
+
+            <BrandField
+              placeholder="Confirm password"
+              secureTextEntry
+              autoCapitalize="none"
+              autoComplete="new-password"
+              value={confirm}
+              onChangeText={setConfirm}
               error={error ?? undefined}
             />
 
-            <BrandButton label="Log in" loading={busy} onPress={submit} />
+            {notice ? (
+              <BrandText variant="small" tone="primaryDeep">
+                {notice}
+              </BrandText>
+            ) : null}
+
+            <BrandButton label="Create account" loading={busy} onPress={submit} />
 
             <Collapsible label="More options" expandedLabel="Fewer options">
               <ProviderButtons />
             </Collapsible>
 
-            <BrandButton
-              label="Look around as a guest"
-              variant="link"
-              disabled={busy}
-              onPress={guest}
-              accessibilityHint="Browse without an account"
-            />
-
             <View style={styles.footer}>
               <BrandText variant="small" tone="inkSoft">
-                No account?
+                Already have an account?
               </BrandText>
               <BrandButton
-                label="Sign up"
+                label="Log in"
                 variant="link"
-                onPress={() => router.push('/(auth)/sign-up')}
+                onPress={() => router.back()}
                 style={styles.footerLink}
               />
             </View>
