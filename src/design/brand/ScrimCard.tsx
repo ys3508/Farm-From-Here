@@ -16,8 +16,13 @@ export type ScrimCardProps = {
   /**
    * Fraction of screen height the illustration keeps above the card.
    * The house value is 0.52 — see `scrim.revealFraction`.
+   *
+   * Ignored when `fillRemaining` is set, because then the parent has already
+   * reserved the illustration's band and the card simply takes what is left.
    */
   reveal?: number;
+  /** Inside <OnboardingStage>: take all the height below the illustration. */
+  fillRemaining?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -36,12 +41,17 @@ export type ScrimCardProps = {
  * Login and sign up share it. Login has less in it and so sits naturally
  * shorter, revealing more of the scene — that is intended, not a bug.
  */
-export function ScrimCard({ children, reveal = scrim.revealFraction, style }: ScrimCardProps) {
+export function ScrimCard({
+  children,
+  reveal = scrim.revealFraction,
+  fillRemaining = false,
+  style,
+}: ScrimCardProps) {
   const { height } = useWindowDimensions();
-  const maxHeight = height * (1 - reveal);
+  const sizing = fillRemaining ? styles.fill : { maxHeight: height * (1 - reveal) };
 
   return (
-    <View style={[styles.shell, { maxHeight }, style]}>
+    <View style={[styles.shell, sizing, style]}>
       {/*
        * expo-blur gives a real frosted pane on iOS and Android. On web its
        * support is patchy, so the translucent tint underneath is what carries
@@ -66,6 +76,7 @@ export function ScrimCard({ children, reveal = scrim.revealFraction, style }: Sc
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   shell: {
     // Rounded only at the top: a sheet of paper lifted from the bottom edge.
     borderTopLeftRadius: brandRadius.sheet,

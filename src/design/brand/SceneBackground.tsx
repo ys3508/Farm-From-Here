@@ -10,11 +10,24 @@ import { brandColors, brandSpacing } from './tokens';
  * are copied into assets/onboarding/ — Expo cannot load from an arbitrary
  * Desktop path at runtime, so the copy is what actually ships.
  */
-export const scenes = {
-  splash: require('../../../assets/onboarding/splash.png') as ImageSourcePropType,
-  welcome: require('../../../assets/onboarding/welcome.png') as ImageSourcePropType,
-  login: require('../../../assets/onboarding/login-bg.png') as ImageSourcePropType,
-  signup: require('../../../assets/onboarding/signup-bg.png') as ImageSourcePropType,
+/**
+ * Intrinsic pixel size is recorded here alongside each require.
+ *
+ * `Image.resolveAssetSource` does not exist on react-native-web and expo-asset
+ * is not a direct dependency, so there is no runtime way to ask an image how
+ * big it is that works everywhere. These are committed, fixed assets, so the
+ * dimensions are simply stated.
+ *
+ * ⚠️ REPLACING ANY ARTWORK MEANS UPDATING ITS NUMBERS HERE. They decide how wide
+ * the picture renders, which decides how wide the wordmark is allowed to be.
+ */
+type Scene = { source: ImageSourcePropType; width: number; height: number };
+
+export const scenes: Record<'splash' | 'welcome' | 'login' | 'signup', Scene> = {
+  splash: { source: require('../../../assets/onboarding/splash.png'), width: 1024, height: 1536 },
+  welcome: { source: require('../../../assets/onboarding/welcome.png'), width: 1024, height: 1536 },
+  login: { source: require('../../../assets/onboarding/login-bg.png'), width: 1086, height: 1448 },
+  signup: { source: require('../../../assets/onboarding/signup-bg.png'), width: 941, height: 1672 },
 };
 
 export type SceneName = keyof typeof scenes;
@@ -43,7 +56,7 @@ export function SceneBackground({ scene, children }: SceneBackgroundProps) {
        * a background that silently stops short on one platform.
        */}
       <Image
-        source={scenes[scene]}
+        source={scenes[scene].source}
         resizeMode="cover"
         style={styles.image}
         accessibilityIgnoresInvertColors

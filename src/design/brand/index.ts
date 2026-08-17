@@ -10,6 +10,7 @@ export { BrandText } from './BrandText';
 export { BrandButton } from './BrandButton';
 export { BrandField } from './BrandField';
 export { ScrimCard } from './ScrimCard';
+export { OnboardingStage } from './OnboardingStage';
 export { StepProgress } from './StepProgress';
 export { Collapsible } from './Collapsible';
 export { SceneBackground, SceneSlot, scenes, type SceneName } from './SceneBackground';

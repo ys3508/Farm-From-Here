@@ -1,14 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   BrandButton,
   BrandField,
   BrandText,
   Collapsible,
-  SceneBackground,
+  OnboardingStage,
   ScrimCard,
   StepProgress,
   brandColors,
@@ -40,7 +39,6 @@ type Path = 'credentials' | 'thirdParty';
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const {
     signUpWithEmail,
     saveProfileDetails,
@@ -140,20 +138,13 @@ export default function SignUpScreen() {
     step === 1 ? 'Create your account' : step === 2 ? 'Set a password' : 'A little about you';
 
   return (
-    <SceneBackground scene="signup">
-      <KeyboardAvoidingView
-        style={styles.fill}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={[styles.stage, { paddingTop: insets.top }]}>
-          <View style={styles.brand}>
-            <BrandText family="display" weight="light" variant="wordmark" onImage center>
-              FARM FROM HERE
-            </BrandText>
-          </View>
-
-          <ScrimCard>
-            <StepProgress
+    <KeyboardAvoidingView
+      style={styles.fill}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <OnboardingStage scene="signup">
+        <ScrimCard fillRemaining>
+          <StepProgress
               total={3}
               current={step}
               // Third-party users never set a password, so step 2 shows as done
@@ -311,18 +302,15 @@ export default function SignUpScreen() {
                 onPress={leave}
                 style={styles.footerLink}
               />
-            </View>
-          </ScrimCard>
-        </View>
-      </KeyboardAvoidingView>
-    </SceneBackground>
+          </View>
+        </ScrimCard>
+      </OnboardingStage>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  stage: { flex: 1, justifyContent: 'flex-end' },
-  brand: { alignItems: 'center', paddingBottom: brandSpacing.lg },
   row: { flexDirection: 'row', gap: brandSpacing.md },
   half: { flex: 1 },
   // The primary action gets the wider share so its label stays on one line.
