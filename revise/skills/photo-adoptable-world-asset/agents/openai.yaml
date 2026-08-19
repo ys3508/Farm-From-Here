@@ -1,0 +1,4 @@
+interface:
+  display_name: "Photo Adoptable World Asset"
+  short_description: "Turn a real farm photo into a transparent adoptable world asset."
+  default_prompt: "Use $photo-adoptable-world-asset to transform this farm photo into a transparent FARM FROM HERE adoptable asset."
