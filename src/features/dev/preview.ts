@@ -113,8 +113,19 @@ export const PREVIEW_SCREENS: { path: string; title: string; note: string }[] = 
   { path: '/splash', title: 'Splash', note: '3s intro. Shows "Welcome home :)" when a session exists on the device.' },
   { path: '/(auth)/sign-in', title: 'Login', note: 'Email / username / phone in one field.' },
   { path: '/(auth)/sign-up', title: 'Sign up', note: 'Three-step wizard. Step 2 is skipped on the third-party path.' },
-  { path: '/(app)/world', title: 'My World', note: 'The home dashboard. Live Growth and Seeds.' },
-  { path: '/(app)/map', title: 'Map', note: 'Stylised map with real distance text.' },
+  {
+    path: '/(app)/world',
+    title: 'My World',
+    note: 'The living canvas. Starts with the box; onboarding grants the first life.',
+  },
+  { path: '/(app)/farm', title: 'Farm', note: 'Locked narrative placeholder — USE SEEDS.' },
+  { path: '/(app)/quest', title: 'Quest', note: 'Locked narrative placeholder — GROW SEEDS.' },
+  { path: '/(app)/community', title: 'Community', note: 'Locked narrative placeholder — posts.' },
+  {
+    path: '/(app)/map',
+    title: 'Map',
+    note: 'Stylised map with real distance text. Route kept, but no longer a tab.',
+  },
   { path: '/(app)/profile', title: 'Profile', note: 'Avatar, username, referral code, sign out.' },
   { path: '/setup', title: 'Setup', note: 'Shown when Supabase is not configured.' },
 ];
