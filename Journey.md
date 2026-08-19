@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-08-19 16:39 — Farmer World：顶部世界切换 + 竖向滑动 + 农民版底栏
+
+- **先做 Task 1（单独一条 commit）**：消费者底栏改为 `My World | Farm | Quest | Community | Me`，
+  只有 Quest 和 Farm 换了位置，图标／文案／路由／页面一个没动。全 app 没有任何按下标索引的
+  tab 逻辑，声明顺序就是底栏顺序。已在网页版核对：顺序对、默认还是 My World、`/quest` `/farm`
+  深链照常落到各自页面。
+- **Task 2：两个世界是同一块竖向画布的上下两屏**。上面是 Farmer World（`farmer-world-background.png`
+  的天空 + 幼苗），下面是 My World（沙丘）。底栏固定不动，只有画布在动。
+- **`activeWorld` 是唯一真相**：放在 tab 导航器之上的 `WorldModeProvider` 里。画布的位置和底栏
+  前两格都由它推导出来，别处不存第二份状态，所以三者不可能对不上。
+- **点右半边 = 向上滑，同一件事两个入口**：滑过接缝的那一刻，切换指示和底栏在同一帧里一起翻。
+- **农民底栏 `My Farm | Post | Quest | Community | Me`**：一个导航器，每个页面只声明一次，
+  **只有第 1、2 格会变**。第 1 格连路由都不换（My World 和 My Farm 是同一块画布的两屏）。
+  已在浏览器里验证：切世界时 Quest 那一屏的 DOM 节点是**同一个实例**，没有重挂载、没有分叉。
+- **门槛就是一行 `farm_members`，而且失败一律按"不是农民"处理**。纯消费者根本不会挂载农民那一屏、
+  不装手势、直接用 URL 进农民路由也会被送回首页；他们点右半边打开的是**申请入口**。
+- ⚠️ **Step 2 的农民页面本来就不存在，这轮是占位**：Post / 建地块 / 加认养物 / 编辑农场资料 /
+  申请表，都是能点能进、并写明由 `revise/skills/2026-08-17-step2-farmer-portal.md` 哪一节来建的
+  占位页。这轮**只做世界切换的壳**，没有重建 Step 2。
+- ⚠️ **滑动方向**：spec 里"往上平移进入 Farmer World"（=手指下拉，像地图）和"向上滑"是相反的，
+  你选了**向上滑进入 Farmer World**。就一个开关 `SWIPE_UP_ENTERS_FARMER_WORLD`，真机上觉得别扭
+  直接翻。
+- ⚠️ **标语是占位**，集中在 `FARMER_APPLICATION_COPY` 一个常量里（另加了一条 `toggle: '带上你的'`
+  的英文短标签给药丸用，因为药丸放不下整句、又不能对没有农场的人写 "Farmer World"）。
+- 预览模式现在**默认是农民**（这样才看得到农民那一侧）；`.env.local` 加
+  `EXPO_PUBLIC_PREVIEW_FARMER=false` 可切回纯消费者视角，两边都实测过。
+- 详见 `updates/2026-08-19_CC_farmer-world-and-tabs.md`。
+
 ## 2026-08-17 20:10 — 修复：预览模式下余额被清零
 
 - 预览模式里任何一次 profile 刷新（下拉刷新、保存资料）都会去查那个占位后端，
