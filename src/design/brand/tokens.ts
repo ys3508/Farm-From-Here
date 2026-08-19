@@ -133,6 +133,14 @@ export const brandType = {
   title: { fontSize: 26, lineHeight: 32, letterSpacing: 26 * 0.04 },
   /** "Real world. Real growth." */
   subtitle: { fontSize: 15, lineHeight: 22, letterSpacing: 15 * 0.16 },
+  /**
+   * The world's speaking voice — a short line of prose set in the display face.
+   *
+   * `title` (26) is a heading size and breaks two-line prose badly on a 375pt
+   * phone; `body` (15) in a serif reads as a mistake. 20 is where Cormorant
+   * still reads as the book-plate voice and a full sentence survives one line.
+   */
+  lead: { fontSize: 20, lineHeight: 29, letterSpacing: 20 * 0.02 },
   body: { fontSize: 15, lineHeight: 22, letterSpacing: 0 },
   small: { fontSize: 13, lineHeight: 19, letterSpacing: 0 },
   caption: { fontSize: 11, lineHeight: 16, letterSpacing: 0.3 },

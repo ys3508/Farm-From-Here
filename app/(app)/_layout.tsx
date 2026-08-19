@@ -27,7 +27,7 @@ import { WorldModeProvider, useWorldMode } from '@/features/farmer';
  * deep link and from the /dev preview index; the spec's bar simply has no slot
  * for it. Nothing was deleted.
  *
- * ORDER — My World | Farm | Quest | Community | Me
+ * ORDER — Homestead | Farm | Quest | Community | Me
  * (revise/2026-08-19-farmer-world-and-tabs.md, Task 1. Quest and Farm swapped;
  * nothing else changed.)
  *
@@ -40,9 +40,14 @@ import { WorldModeProvider, useWorldMode } from '@/features/farmer';
  * TWO BARS, FIVE SLOTS, ONE NAVIGATOR
  * (revise/2026-08-19-farmer-world-and-tabs.md, Task 2)
  *
- *   My World   │ My World │ Farm     │ Quest │ Community │ Me
- *   Farmer     │ My Farm  │ Post     │ Quest │ Community │ Me
- *                ▲ slot 1   ▲ slot 2   ▲──── identical ────▲
+ *   Homestead │ Homestead │ Farm     │ Quest │ Community │ Me
+ *   Grow      │ Grow      │ Post     │ Quest │ Community │ Me
+ *               ▲ slot 1     ▲ slot 2   ▲──── identical ────▲
+ *
+ * SLOT 1'S LABEL follows the top toggle: Homestead / Grow. The polish spec's
+ * default was to leave it as "My World" / "My Farm"; the OWNER OVERRODE THAT on
+ * 2026-08-19 so the toggle and the tab always say the same two words. The
+ * onboarding card's "This is your world" copy was NOT renamed with it.
  *
  * ONLY SLOTS 1 AND 2 CHANGE. Quest, Community and Me are the SAME screens, not
  * forks and not copies — they are declared once, and crossing between worlds
@@ -111,10 +116,10 @@ function AppTabs() {
         name="world"
         options={{
           tabBarLabel: ({ color }) => (
-            <TabLabel title={inFarmerWorld ? 'My Farm' : 'My World'} color={color} />
+            <TabLabel title={inFarmerWorld ? 'Grow' : 'Homestead'} color={color} />
           ),
           tabBarIcon: ({ color }) => <TabGlyph glyph={inFarmerWorld ? '🚜' : '🏜️'} color={color} />,
-          tabBarAccessibilityLabel: inFarmerWorld ? 'My Farm' : 'My World',
+          tabBarAccessibilityLabel: inFarmerWorld ? 'Grow' : 'Homestead',
         }}
       />
 
@@ -172,6 +177,7 @@ function AppTabs() {
           management screens are reached from inside My Farm — the spec is
           explicit that they do NOT get bottom tabs of their own. */}
       <Tabs.Screen name="apply" options={{ href: null }} />
+      <Tabs.Screen name="balance" options={{ href: null }} />
       <Tabs.Screen name="plot-new" options={{ href: null }} />
       <Tabs.Screen name="adoptable-new" options={{ href: null }} />
       <Tabs.Screen name="farm-profile" options={{ href: null }} />

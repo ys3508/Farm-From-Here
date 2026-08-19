@@ -1,18 +1,16 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { BOX_SIZE, FIRST_CREATURE_POSITION, greeningLevelForGrowth } from '@/config/myWorld';
-import { brandSpacing } from '@/design/brand';
+import { greeningLevelForGrowth } from '@/config/myWorld';
 import { useAuth } from '@/features/auth/AuthProvider';
 
-import { EconomyIndicator } from './EconomyIndicator';
+import { Day1CreatureSlot } from './Day1CreatureSlot';
 import { LifeSprite } from './LifeSprite';
 import { OnboardingOverlay, highlights, type OnboardingStep } from './OnboardingOverlay';
-import { StarterBox } from './StarterBox';
 import { WorldBackground } from './WorldBackground';
 import { useOnboardingSeen } from './useOnboardingSeen';
 import { useWorldLives } from './useWorldLives';
-import { placeLife, project, scaleForId } from './worldCoords';
+import { placeLife, scaleForId } from './worldCoords';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -53,11 +51,18 @@ export type MyWorldPanelProps = {
   /** The panel's box. World coordinates are projected onto exactly this. */
   width: number;
   height: number;
-  /** Top safe-area inset, for the balances pill. */
-  topInset: number;
+  /**
+   * Reports whether the onboarding tour is currently pointing at the balances.
+   *
+   * The balances pill itself no longer lives in this panel — it is fixed above
+   * BOTH worlds now (polish spec §3), so the tour cannot highlight it directly
+   * any more. The panel still owns the tour, so it says when to glow and the
+   * canvas does the glowing.
+   */
+  onBalancesHighlighted?: (highlighted: boolean) => void;
 };
 
-export function MyWorldPanel({ width, height, topInset }: MyWorldPanelProps) {
+export function MyWorldPanel({ width, height, onBalancesHighlighted }: MyWorldPanelProps) {
   const { profile } = useAuth();
 
   const { lives, loading, granting, isEmpty, grantFirstLife } = useWorldLives(profile?.id);
@@ -79,6 +84,11 @@ export function MyWorldPanel({ width, height, topInset }: MyWorldPanelProps) {
 
   const greeningLevel = greeningLevelForGrowth(profile?.growth_xp ?? 0);
   const marks = step ? highlights(step) : { balances: false, tabs: false, box: false };
+
+  // Hand the balances step up to whoever is drawing the pill.
+  useEffect(() => {
+    onBalancesHighlighted?.(marks.balances);
+  }, [marks.balances, onBalancesHighlighted]);
 
   /**
    * The creature grant. Safe to call more than once — the database's
@@ -146,8 +156,6 @@ export function MyWorldPanel({ width, height, topInset }: MyWorldPanelProps) {
   };
 
   const ready = viewport.width > 0 && viewport.height > 0;
-  const boxSize = viewport.width * BOX_SIZE;
-  const boxAnchor = project(FIRST_CREATURE_POSITION, viewport);
 
   return (
     <View style={[styles.root, { width, height }]}>
@@ -174,15 +182,17 @@ export function MyWorldPanel({ width, height, topInset }: MyWorldPanelProps) {
             );
           })}
 
-          {/* ── The box ────────────────────────────────────────────────────
-           * Exists ONLY while the world is empty. The moment the first creature
-           * lands, `isEmpty` flips and the box is gone — it is not a persistent
-           * container and nothing keeps it around. */}
+          {/* ── The day-1 protagonist ──────────────────────────────────────
+           * Exists ONLY while the world is empty. The moment the first life
+           * lands, `isEmpty` flips and it is gone.
+           *
+           * It goes through Day1CreatureSlot rather than rendering the box
+           * directly: the slot owns the spot, and the real starter creature
+           * drops into it next round without touching this file. The box is a
+           * stand-in, not the empty state's answer. */}
           {isEmpty && !loading ? (
-            <StarterBox
-              left={boxAnchor.x - boxSize / 2}
-              top={boxAnchor.y - boxSize}
-              size={boxSize}
+            <Day1CreatureSlot
+              viewport={viewport}
               onPress={handleBoxPress}
               highlighted={marks.box}
             />
@@ -190,20 +200,9 @@ export function MyWorldPanel({ width, height, topInset }: MyWorldPanelProps) {
         </>
       ) : null}
 
-      {/* ── Seeds + Growth, top-right of MY WORLD ───────────────────────────
-       * Display only. Two separate quantities, never combined.
-       *
-       * It rides with this panel rather than being pinned to the screen: Growth
-       * and Seeds are the player's economy, and Farmer World is where the same
-       * person does their real-world work. Panning up leaves the scoreboard
-       * behind on purpose. */}
-      <View style={[styles.indicator, { top: topInset + brandSpacing.sm }]} pointerEvents="none">
-        <EconomyIndicator
-          seeds={profile?.seeds_balance ?? 0}
-          growth={profile?.growth_xp ?? 0}
-          highlighted={marks.balances}
-        />
-      </View>
+      {/* Seeds + Growth used to hang here, riding with this panel. They are
+          now fixed above both worlds — one person, one balance (polish spec
+          §3). See app/(app)/world.tsx. */}
 
       {step ? (
         <OnboardingOverlay
@@ -220,5 +219,4 @@ export function MyWorldPanel({ width, height, topInset }: MyWorldPanelProps) {
 
 const styles = StyleSheet.create({
   root: { overflow: 'hidden' },
-  indicator: { position: 'absolute', right: brandSpacing.lg },
 });

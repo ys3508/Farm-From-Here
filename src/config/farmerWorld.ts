@@ -104,10 +104,22 @@ export const WORLD_SETTLE_SPRING = {
  * COPY — all of it swappable, none of it inlined at a call site
  * ──────────────────────────────────────────────────────────────────────────── */
 
-/** The two sides of the top toggle, for a profile that IS a farmer. */
+/**
+ * The two sides of the top toggle, for a profile that IS a farmer.
+ *
+ * ⚠️ RENAMED 2026-08-19 (revise/2026-08-19-homestead-ui-polish.md §2):
+ * "My World / Farmer World" → **"Homestead / Grow"**. Both sides are the SAME
+ * PERSON, and calling the right side "Farmer" quietly excluded the backyard and
+ * community growers who are the top of the funnel. Homestead and Grow are both
+ * "mine". Do not revert this to "Farmer World".
+ *
+ * The internal WorldMode keys stay 'my-world' / 'farmer-world' on purpose — the
+ * rename is about visible copy, and renaming the keys would churn every file
+ * that reasons about the two worlds for no user-visible gain.
+ */
 export const WORLD_TOGGLE_LABELS: Record<WorldMode, string> = {
-  'my-world': 'My World',
-  'farmer-world': 'Farmer World',
+  'my-world': 'Homestead',
+  'farmer-world': 'Grow',
 };
 
 /**

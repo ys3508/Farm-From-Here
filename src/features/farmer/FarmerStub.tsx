@@ -38,23 +38,23 @@ export function FarmerStub({ title, line, specSection }: FarmerStubProps) {
   return (
     <View style={[styles.root, { paddingTop: insets.top + brandSpacing.xxl }]}>
       <View style={styles.body}>
-        <BrandText variant="caption" weight="semibold" tone="inkSoft" style={styles.kicker}>
-          FARMER WORLD
+        <BrandText textRole="kicker" tone="inkSoft" style={styles.kicker}>
+          GROW
         </BrandText>
-        <BrandText variant="title" family="display" tone="ink">
+        <BrandText textRole="title" tone="ink">
           {title}
         </BrandText>
-        <BrandText variant="body" tone="inkSoft">
+        <BrandText textRole="body" tone="inkSoft">
           {line}
         </BrandText>
 
         <View style={styles.note}>
-          <BrandText variant="small" weight="semibold" tone="primaryDeep">
+          <BrandText textRole="detail" weight="semibold" tone="primaryDeep">
             Not built yet
           </BrandText>
-          <BrandText variant="caption" tone="inkSoft">
+          <BrandText textRole="hint" tone="inkSoft">
             This screen is specified in revise/skills/2026-08-17-step2-farmer-portal.md{' '}
-            {specSection}. The Farmer World shell routes here so the navigation is real; the
+            {specSection}. The Grow shell routes here so the navigation is real; the
             screen itself arrives with Step 2.
           </BrandText>
         </View>

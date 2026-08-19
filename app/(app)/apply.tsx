@@ -36,19 +36,19 @@ export default function FarmerApplicationScreen() {
   return (
     <View style={[styles.root, { paddingTop: insets.top + brandSpacing.xxl }]}>
       <View style={styles.body}>
-        <BrandText variant="title" family="display" tone="ink">
+        <BrandText textRole="title" tone="ink">
           {FARMER_APPLICATION_COPY.title}
         </BrandText>
-        <BrandText variant="body" tone="inkSoft">
+        <BrandText textRole="body" tone="inkSoft">
           {FARMER_APPLICATION_COPY.subtitle}
         </BrandText>
 
         {reachedTheForm ? (
           <View style={styles.note}>
-            <BrandText variant="small" weight="semibold" tone="primaryDeep">
+            <BrandText textRole="detail" weight="semibold" tone="primaryDeep">
               The application form is not built yet
             </BrandText>
-            <BrandText variant="caption" tone="inkSoft">
+            <BrandText textRole="hint" tone="inkSoft">
               It is specified in revise/skills/2026-08-17-step2-farmer-portal.md §2 — the
               community-grower / verified-farm choice, where you grow, photos, and the
               supporting material a working farm sends in. This round built the way in, not

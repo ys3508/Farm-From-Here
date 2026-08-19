@@ -6,7 +6,8 @@
  */
 export * from './tokens';
 export { brandFonts } from './fonts';
-export { BrandText } from './BrandText';
+export { BrandText, type BrandTextProps } from './BrandText';
+export { textRoles, type TextRole, type TextRoleStyle } from './textRoles';
 export { BrandButton } from './BrandButton';
 export { BrandField } from './BrandField';
 export { ScrimCard } from './ScrimCard';

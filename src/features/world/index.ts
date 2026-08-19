@@ -5,6 +5,7 @@
  * Spec: revise/2026-08-17-my-world.md
  */
 export { ComingSoon, type ComingSoonProps } from './ComingSoon';
+export { Day1CreatureSlot, type Day1CreatureSlotProps } from './Day1CreatureSlot';
 export { EconomyIndicator, type EconomyIndicatorProps } from './EconomyIndicator';
 export { Greening, type GreeningProps } from './Greening';
 export { LifeSprite, type LifeSpriteProps } from './LifeSprite';

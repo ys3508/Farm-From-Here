@@ -133,7 +133,7 @@ function Segment({
       style={({ pressed }) => [styles.segment, pressed && styles.pressed]}
     >
       <BrandText
-        variant="caption"
+        textRole="label"
         weight={active ? 'semibold' : 'medium'}
         style={{ color: active ? brandColors.primaryDeep : brandColors.inkSoft }}
       >

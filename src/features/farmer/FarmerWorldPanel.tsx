@@ -75,20 +75,20 @@ export function FarmerWorldPanel({ height, farmName, topInset }: FarmerWorldPane
 
       <View style={[styles.body, { paddingTop: topInset + brandSpacing.xxxl }]}>
         <View style={styles.card}>
-          <BrandText variant="caption" weight="semibold" tone="inkSoft" style={styles.kicker}>
+          <BrandText textRole="kicker" tone="inkSoft" style={styles.kicker}>
             YOUR FARM
           </BrandText>
-          <BrandText variant="title" family="display" tone="ink">
+          <BrandText textRole="title" tone="ink">
             {farmName ?? 'Your farm'}
           </BrandText>
 
           {/* The waiting count is the heartbeat of this screen — and it is not
               wired yet. It shows as a dash rather than a plausible number. */}
           <View style={styles.waiting}>
-            <BrandText variant="body" tone="ink">
+            <BrandText textRole="lead" tone="ink">
               — people are waiting for your photos
             </BrandText>
-            <BrandText variant="caption" tone="inkSoft">
+            <BrandText textRole="hint" tone="inkSoft">
               The count and the plot list arrive with the Step-2 farmer portal.
             </BrandText>
           </View>
@@ -104,14 +104,14 @@ export function FarmerWorldPanel({ height, farmName, topInset }: FarmerWorldPane
                 style={({ pressed }) => [styles.action, pressed && styles.pressed]}
               >
                 <View style={styles.actionCopy}>
-                  <BrandText variant="small" weight="semibold" tone="primaryDeep">
+                  <BrandText textRole="detail" weight="semibold" tone="primaryDeep">
                     {action.label}
                   </BrandText>
-                  <BrandText variant="caption" tone="inkSoft">
+                  <BrandText textRole="hint" tone="inkSoft">
                     {action.hint}
                   </BrandText>
                 </View>
-                <BrandText variant="small" tone="inkSoft">
+                <BrandText textRole="detail" tone="inkSoft">
                   ›
                 </BrandText>
               </Pressable>

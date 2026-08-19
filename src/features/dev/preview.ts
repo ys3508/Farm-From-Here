@@ -167,6 +167,11 @@ export const PREVIEW_SCREENS: { path: string; title: string; note: string }[] = 
     note: 'Farmer tab slot 2. Placeholder — the real 30-second update flow is Step 2.',
   },
   {
+    path: '/(app)/balance',
+    title: 'Seeds & Growth',
+    note: 'Read-only detail behind the balance pill. Opens from either world.',
+  },
+  {
     path: '/(app)/apply',
     title: 'Farmer application',
     note: 'What a NON-farmer gets from the right toggle. Placeholder — Step 2 builds the form.',

@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-08-19 17:14 — Homestead 收尾五件事:字体归一 / 顶部居中切换 / 两个世界都显示余额 / 余额详情页 / day-1 生物槽位
+
+- **① 字体不是各屏乱写,是各屏各挑一套**。所有屏本来就走 `<BrandText>`,但每屏自己挑
+  `variant` + `family`,消费者主屏刚好全挑了 Inter,onboarding 和农场卡挑了衬线,于是看着像两个 app。
+  改法是加一层**角色层** `src/design/brand/textRoles.ts`(`title` / `lead` / `whisper` / `detail` /
+  `kicker` / `hint` / `amount` / `label`),写 `<BrandText textRole="lead">` 就自动拿到对应字体。
+  现在全仓 world/farmer/app 屏里 `variant="…" family=` 成对出现的地方为 0。"This is your world."
+  已经和农场名同一套衬线。
+- **② 顶部切换改成整行居中,两个世界一致,并改名 `Homestead | Grow`**。"Farmer World" 作为可见文案
+  已经全仓消失。切换和余额现在是**浮在画布之上的固定两行**,不再挂在某一屏里。内部 key 仍是
+  `'my-world'` / `'farmer-world'`,只改可见文案。
+- **③ 余额两个世界都显示**。原来它跟着消费者那一屏一起滑走,等于在说"这是消费者的余额"——不对,
+  一个人只有一份余额。onboarding 指余额那一步改成子屏上报、画布来发光。
+- **④ 点余额进只读的 Seeds / Growth 详情页**(新 `app/(app)/balance.tsx`)。按你选的:**独立页 + 返回键**
+  (硬件返回可用、可深链),不是第 6 个底栏 tab;内容是**余额 + 两个账本的最近记录**。
+  数据直接用仓里早就写好、但一直没人调用的 `useLedgers` / `describeSource`——没编字段,没动 schema。
+  只读是三重的:页面没有任何动作、RLS 只给 SELECT、账本在类型上就是 `ReadOnly<>`,想写都编译不过。
+- **⑤ day-1 空状态包进 `Day1CreatureSlot`**,**箱子美术一点没改**,也没有另编空状态美术
+  (没有种子、没有地块、没有"认领土地"、没有远处农场)。文件头写明:生物不在这轮做,下一轮把
+  `<StarterBox>` 换掉即可,`onPress`(首个生命发放)和 `highlighted`(引导指向)已经接好,生物直接继承。
+- ⚠️ **你把底栏第一格也改名了**(spec 默认是保留 "My World" / "My Farm",你选了跟顶部一致 →
+  `Homestead` / `Grow`)。onboarding 卡片的 "This is your world" 没跟着改。
+- ⚠️ **非农民的右半边仍然是 "Bring yours" 而不是 "Grow"** —— 这一处正是缺失的 gating addendum 要改的,
+  等那份 spec 进仓再翻(一个常量)。
+- ⚠️ **`revise/2026-08-19-farmer-gating-addendum.md` 到现在仍然不在仓库里**(工作区和 git 历史都没有)。
+  这五件事不依赖它,所以照做了;它落地时会碰到的两个点已写在交接里。
+- 详见 `updates/2026-08-19_CC_homestead-ui-polish.md`。
+
 ## 2026-08-19 16:39 — Farmer World：顶部世界切换 + 竖向滑动 + 农民版底栏
 
 - **先做 Task 1（单独一条 commit）**：消费者底栏改为 `My World | Farm | Quest | Community | Me`，

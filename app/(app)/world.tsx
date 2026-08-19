@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -19,8 +20,9 @@ import {
 } from '@/config/farmerWorld';
 import { TAB_BAR_HEIGHT } from '@/config/myWorld';
 import { brandSpacing } from '@/design/brand';
+import { useAuth } from '@/features/auth/AuthProvider';
 import { FarmerWorldPanel, WorldToggle, useWorldMode } from '@/features/farmer';
-import { MyWorldPanel } from '@/features/world';
+import { EconomyIndicator, MyWorldPanel } from '@/features/world';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -47,10 +49,28 @@ import { MyWorldPanel } from '@/features/world';
  * A PURE CONSUMER NEVER GETS THE SECOND PANEL. It is not rendered, not
  * measured, and the drag gesture is not installed — there is no Farmer World to
  * peek at, only the invitation on the right of the toggle.
+ *
+ * ── THE FIXED HEAD (revise/2026-08-19-homestead-ui-polish.md §2–§4) ──────────
+ * Two rows sit above the canvas and do not move with it:
+ *
+ *   row 1   the Homestead | Grow toggle, CENTRED
+ *   row 2   the Seeds + Growth balance, tappable
+ *
+ * Both are identical in both worlds, because they are ONE PERSON'S. The balance
+ * used to ride with the My World panel and slide away when you panned up, which
+ * said the wrong thing: there is one balance, not a consumer one.
+ * ────────────────────────────────────────────────────────────────────────────
  */
 export default function WorldCanvasScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { profile } = useAuth();
   const { activeWorld, isFarmer, farmName, requestWorld } = useWorldMode();
+
+  /* The onboarding tour lives inside the My World panel, but the thing it
+   * points at during the 'balances' step is now up here. The panel reports;
+   * this screen glows. */
+  const [balancesHighlighted, setBalancesHighlighted] = useState(false);
 
   /* ── The canvas box ──────────────────────────────────────────────────────
    * One panel is exactly this tall, and My World projects its stored world
@@ -241,23 +261,46 @@ export default function WorldCanvasScreen() {
           <MyWorldPanel
             width={viewport.width}
             height={panelHeight}
-            topInset={insets.top}
+            onBalancesHighlighted={setBalancesHighlighted}
           />
         </Animated.View>
       ) : (
         // No second panel exists for a consumer — not hidden, not offscreen,
         // not mounted.
-        <MyWorldPanel width={viewport.width} height={panelHeight} topInset={insets.top} />
+        <MyWorldPanel
+          width={viewport.width}
+          height={panelHeight}
+          onBalancesHighlighted={setBalancesHighlighted}
+        />
       )}
 
-      {/* Fixed above the canvas, in both worlds. The single visible statement
-          of which world you are in. */}
-      <View style={[styles.toggle, { top: insets.top + brandSpacing.sm }]}>
-        <WorldToggle
-          activeWorld={activeWorld}
-          isFarmer={isFarmer}
-          onRequestWorld={requestWorld}
-        />
+      {/* ── The fixed head ──────────────────────────────────────────────────
+       * `box-none` all the way down, so only the two controls take touches and
+       * the dunes stay tappable around them. */}
+      <View
+        style={[styles.head, { top: insets.top + brandSpacing.sm }]}
+        pointerEvents="box-none"
+      >
+        {/* Row 1 — centred, both worlds. The single visible statement of which
+            world you are in. */}
+        <View style={styles.toggleRow} pointerEvents="box-none">
+          <WorldToggle
+            activeWorld={activeWorld}
+            isFarmer={isFarmer}
+            onRequestWorld={requestWorld}
+          />
+        </View>
+
+        {/* Row 2 — one person, one balance, the same in both worlds. Tapping it
+            opens the read-only Seeds/Growth detail. */}
+        <View style={styles.balanceRow} pointerEvents="box-none">
+          <EconomyIndicator
+            seeds={profile?.seeds_balance ?? 0}
+            growth={profile?.growth_xp ?? 0}
+            highlighted={balancesHighlighted}
+            onPress={() => router.push('/(app)/balance')}
+          />
+        </View>
       </View>
     </View>
   );
@@ -270,5 +313,16 @@ function clamp(value: number, min: number, max: number) {
 const styles = StyleSheet.create({
   root: { flex: 1, overflow: 'hidden' },
   canvas: { position: 'absolute', top: 0, left: 0 },
-  toggle: { position: 'absolute', left: brandSpacing.lg },
+  head: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    gap: brandSpacing.sm,
+    paddingHorizontal: brandSpacing.lg,
+  },
+  toggleRow: { alignItems: 'center' },
+  // Right-aligned under the centred toggle: the balance keeps the top-right
+  // corner it has always had, and the sapling in the Grow plate stays visible
+  // down the middle.
+  balanceRow: { alignItems: 'flex-end' },
 });
