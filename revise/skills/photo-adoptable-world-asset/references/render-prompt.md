@@ -3,10 +3,19 @@
 This is the executable half of the skill. `SKILL.md` says what a correct
 asset is; this file says how to produce one.
 
-> **Open item:** the image-generation backend is not yet fixed for this
-> project. The prompt below is backend-agnostic. The alpha procedure branches
-> on whether the chosen backend can emit an alpha channel — resolve that
-> before the first production asset.
+> **Backend (settled 2026-08-19):** Codex's built-in ImageGen (`image_gen`).
+> No specific model name is exposed, and there is no local or third-party
+> alternative in play.
+>
+> Two consequences, both already reflected below:
+>
+> - **Alpha works.** ImageGen returns real transparency, confirmed on the
+>   ginger lily test output. Use **branch A** in section 2; the chroma-key
+>   procedure in branch B is retained only as a fallback if that ever
+>   regresses.
+> - **Layers do not.** It returns one flat raster. The layer-separation route
+>   for misregistration is unavailable — see the revised section 2b for the
+>   route that replaces it.
 
 ---
 
@@ -163,32 +172,85 @@ is invisible on a checkerboard is obvious against the actual My World ground.
 
 ---
 
-## 2b. Misregistration in post — the reliable route
+## 2b. Misregistration in post — separate the line, then offset it
 
-Prompting for misregistration has a low success rate. Generators trained on
-illustration default to a clean, closed, evenly weighted contour sitting
-exactly on the edge, and no amount of negative phrasing dislodges it. If the
-backend can emit layers, **do not rely on the prompt for this.**
+Prompting for misregistration has a low success rate. Generators default to a
+clean, closed, evenly weighted contour sitting exactly on the edge, and
+negative phrasing does not dislodge it. Gate 6 failed on three consecutive
+ginger lily generations while every other gate passed.
 
-**If the backend can output a line layer and a colour layer separately:**
+ImageGen cannot emit a line layer and a colour layer separately, so the
+offset has to be produced from the single returned image. This is workable —
+and it is workable **because gate 4 passes**. A flat image has clean,
+unambiguous boundaries between colour areas, which a painted one does not.
 
-1. Generate the colour masses and the line drawing as two images.
-2. Composite with the line layer translated by **4–8 px at 1024 px wide**
-   (scale proportionally), in a consistent direction.
-3. Keep the offset direction constant across one asset, and vary it between
-   assets so a set does not look mechanically produced.
+### The route
 
-This is a few lines of compositing and it is fully controllable — offset
-amount and direction become parameters rather than hopes. It is the single
-highest-leverage change available to this pipeline.
+Take the observed failure as the input rather than fighting it. A uniform
+dark contour is trivial to isolate precisely *because* it is uniform:
 
-**If the backend cannot emit layers,** use the fill-offset wording in the
-LINE block above, and expect to reject a majority of outputs on gate 6.
-Record the hit rate; if it stays low, layer separation becomes a hard
-requirement on the backend choice.
+1. **Extract the line.** Mask pixels matching the contour's hue and lightness
+   — a dark navy against high-key pastels separates cleanly on lightness
+   alone. That mask is the line layer.
+2. **Heal the colour layer.** Replace the masked pixels with their nearest
+   surrounding flat colour. The contour is only a few pixels wide, so a small
+   morphological dilation of the neighbouring regions is sufficient; no real
+   inpainting is required.
+3. **Recolour the line.** Map it to two or more layer-3 hues rather than the
+   single navy — see the LINE block above.
+4. **Offset and composite.** Translate the line layer **4–8 px at 1024 px
+   wide** (scale proportionally) in one consistent direction, then composite
+   over the healed colour layer.
+5. **Optionally break it.** Drop alpha along short random runs of the line
+   path to produce weight variation and interruption, which the prompt also
+   fails to deliver.
 
-Whichever route: the offset must stay small. Displacement large enough to
-read as a doubled image is a different, worse effect.
+Keep the offset direction constant within one asset and vary it between
+assets, so a set does not look mechanically produced. Keep the displacement
+small — large enough to read as a doubled image is a different, worse effect.
+
+### Why this is preferable to more prompting
+
+Offset amount, direction, line colour, and breakage all become parameters
+that can be tuned and re-run without another generation. Everything gate 6
+asks for is geometric, and geometry is cheaper to compute than to argue out
+of a generator.
+
+### The tool
+
+Implemented at `tools/offset_line.py` (needs Pillow + numpy).
+
+```bash
+python3 tools/offset_line.py asset.png asset_offset.png
+python3 tools/offset_line.py asset.png out.png --offset 16,10 --break 0.3
+python3 tools/offset_line.py asset.png out.png --dump-layers   # inspect stages
+```
+
+Offsets are authored against a 1024 px width and scaled to the real image, so
+the same numbers hold across sizes. Useful flags:
+
+| Flag | Default | Use |
+|---|---|---|
+| `--offset dx,dy` | `6,4` | displacement. `16,10` is a strongly visible setting; go higher only if a doubled-image read is wanted, which it usually is not |
+| `--break` | `0.12` | fraction of the line dropped. `0.3` gives a clearly dashed, interrupted contour |
+| `--line-colors` | 3 layer-3 hues | recolours the single navy into contiguous runs of several hues |
+| `--lum-max` | `0.45` | darkness cutoff for what counts as contour |
+| `--hue-range` | `170,290` | restricts the contour to blues, so warm interior markings — an orange throat, a red stamen — are not stripped as line. Pass `any` to disable |
+| `--keep-original-line` | off | leaves the registered contour in place under the offset one, for a doubled-plate look |
+| `--dump-layers` | off | also writes the extracted line and the healed colour separately |
+
+It prints the line coverage it found and warns when the separation looks
+wrong — under 0.2% means it found almost no contour, over 30% means the
+contour is not separating on lightness and `--lum-max` needs lowering.
+
+Verified on a synthetic flat asset: contours removed cleanly, colour areas
+closed, warm interior markings correctly retained in the colour layer.
+
+### Fallback
+
+If a particular asset does not separate — a dark subject, or a contour drawn
+in a subject hue — use the fill-offset wording in the LINE block and expect
+to reject most outputs on gate 6.
 
 ---
 
