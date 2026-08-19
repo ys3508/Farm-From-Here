@@ -23,6 +23,13 @@ import type { FarmMember } from '@/lib/supabase/types';
  * thing they do see is the application entry, which is an invitation rather
  * than a locked door (Step 2 §2, "an entry point somewhere discoverable").
  *
+ * ⚠️ THE GATE HAS TWO HALVES since Step 2A: a `farm_members` row AND at least
+ * one `farm_media` row. A farm with no photo is not ready to be seen by
+ * anybody, so it does not unlock the farmer world either. The approval trigger
+ * seeds the album from the application's photos, which is exactly why an
+ * approved individual passes both halves the moment they submit
+ * (revise/2026-08-19-step2a-farmer-application.md §5).
+ *
  * ⚠️ `loading` matters: until the answer is in, treat the profile as NOT a
  * farmer. Flashing farmer UI at a consumer for one frame is worse than a farmer
  * waiting a beat for theirs.
@@ -37,17 +44,21 @@ export type FarmerMembership = {
   member: Pick<FarmMember, 'id' | 'farm_id' | 'role'> | null;
   /** The farm's name, once it has loaded. Never invented — null until read. */
   farmName: string | null;
+  /** Photos on the farm. The second half of the unlock gate. */
+  mediaCount: number;
 };
 
 export type FarmerMembershipState = FarmerMembership & {
-  /** The gate. True only for a profile with a real farm_members row. */
+  /** The gate: a membership AND at least one photo on the farm. */
   isFarmer: boolean;
+  /** True when the membership exists but the album is still empty. */
+  awaitingFirstPhoto: boolean;
   /** True until the gate has an answer. Treat as "not a farmer" while true. */
   loading: boolean;
   reload: () => Promise<void>;
 };
 
-const NOT_A_FARMER: FarmerMembership = { member: null, farmName: null };
+const NOT_A_FARMER: FarmerMembership = { member: null, farmName: null, mediaCount: 0 };
 
 export function useFarmerMembership(profileId: string | undefined): FarmerMembershipState {
   const [membership, setMembership] = useState<FarmerMembership>(NOT_A_FARMER);
@@ -63,7 +74,7 @@ export function useFarmerMembership(profileId: string | undefined): FarmerMember
     // Preview mode answers from a fixture — see previewFarmMembership for how
     // to review the consumer (non-farmer) side instead.
     if (isPreviewMode) {
-      setMembership(previewFarmMembership);
+      setMembership({ ...previewFarmMembership, mediaCount: previewFarmMembership.member ? 1 : 0 });
       setLoading(false);
       return;
     }
@@ -98,13 +109,15 @@ export function useFarmerMembership(profileId: string | undefined): FarmerMember
     // empty `Relationships`, so `farms(name)` would type as an error object.
     // The gate is already answered by this point, so the name arriving a beat
     // later costs nothing.
-    const { data: farm } = await supabase
-      .from('farms')
-      .select('name')
-      .eq('id', data.farm_id)
-      .maybeSingle();
+    const [{ data: farm }, { count }] = await Promise.all([
+      supabase.from('farms').select('name').eq('id', data.farm_id).maybeSingle(),
+      supabase
+        .from('farm_media')
+        .select('id', { count: 'exact', head: true })
+        .eq('farm_id', data.farm_id),
+    ]);
 
-    setMembership({ member: data, farmName: farm?.name ?? null });
+    setMembership({ member: data, farmName: farm?.name ?? null, mediaCount: count ?? 0 });
     setLoading(false);
   }, [profileId]);
 
@@ -114,7 +127,8 @@ export function useFarmerMembership(profileId: string | undefined): FarmerMember
 
   return {
     ...membership,
-    isFarmer: membership.member !== null,
+    isFarmer: membership.member !== null && membership.mediaCount > 0,
+    awaitingFirstPhoto: membership.member !== null && membership.mediaCount === 0,
     loading,
     reload: load,
   };

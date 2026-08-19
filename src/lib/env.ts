@@ -19,10 +19,29 @@ export const isSupabaseConfigured =
   rawAnonKey.length > 20 &&
   !rawAnonKey.includes('YOUR-ANON');
 
+/**
+ * Mapbox Search, used for ONE thing: helping an applicant type their own
+ * address accurately (Step 2A). Owner picked Mapbox on 2026-08-19.
+ *
+ * ⚠️ IT IS NEVER USED TO PULL FARM DATA FROM A DIRECTORY. Only real, contracted
+ * farms may appear on this map (CLAUDE.md invariant 6); importing third-party
+ * farm listings would break that at the root. Address autocomplete only.
+ *
+ * Optional by design: with no token the application form still works — the
+ * applicant types city and state by hand, which is a complete answer under the
+ * coarse-location rule. Autocomplete simply switches on when a token is set.
+ */
+const rawMapboxToken = process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '';
+
+/** True when address autocomplete can actually run. */
+export const isMapboxConfigured =
+  rawMapboxToken.startsWith('pk.') && !rawMapboxToken.includes('YOUR-MAPBOX');
+
 export const env = {
   supabaseUrl: rawUrl,
   supabaseAnonKey: rawAnonKey,
   appScheme: process.env.EXPO_PUBLIC_APP_SCHEME || 'farmfromhere',
+  mapboxToken: rawMapboxToken,
 } as const;
 
 /** Human-readable reason the app is in setup mode, for the setup screen. */

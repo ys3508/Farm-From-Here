@@ -193,10 +193,16 @@ export default function MapScreen() {
 }
 
 function FarmCard({ farm, userCoords }: { farm: Farm; userCoords: { latitude: number; longitude: number } | null }) {
-  const distance = formatDistance(userCoords, {
-    latitude: farm.latitude,
-    longitude: farm.longitude,
-  });
+  /* A farm may have NO PIN. Since Step 2A a grower can publish at city
+   * precision — a backyard is not required to give a street address — so
+   * coordinates are nullable and this card must degrade rather than assume.
+   * Spec: revise/2026-08-19-step2a-farmer-application.md, "coarse location". */
+  const farmCoords =
+    farm.latitude !== null && farm.longitude !== null
+      ? { latitude: farm.latitude, longitude: farm.longitude }
+      : null;
+
+  const distance = farmCoords ? formatDistance(userCoords, farmCoords) : null;
 
   return (
     <Card>
@@ -219,7 +225,7 @@ function FarmCard({ farm, userCoords }: { farm: Farm; userCoords: { latitude: nu
         </Text>
       ) : (
         <Text variant="small" tone="muted">
-          Distance hidden — location off
+          {farmCoords ? 'Distance hidden — location off' : farm.address ?? 'Location not published'}
         </Text>
       )}
 
@@ -229,17 +235,17 @@ function FarmCard({ farm, userCoords }: { farm: Farm; userCoords: { latitude: nu
         </Text>
       ) : null}
 
-      <View style={styles.gap}>
-        <Button
-          label="Open in Google Maps"
-          variant="secondary"
-          onPress={() =>
-            void Linking.openURL(
-              googleMapsUrl({ latitude: farm.latitude, longitude: farm.longitude }),
-            )
-          }
-        />
-      </View>
+      {/* No pin, no map link. Sending someone to a map of nothing is worse
+          than not offering the button. */}
+      {farmCoords ? (
+        <View style={styles.gap}>
+          <Button
+            label="Open in Google Maps"
+            variant="secondary"
+            onPress={() => void Linking.openURL(googleMapsUrl(farmCoords))}
+          />
+        </View>
+      ) : null}
     </Card>
   );
 }

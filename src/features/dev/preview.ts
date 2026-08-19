@@ -108,6 +108,8 @@ export const previewFarms: Farm[] = [
     latitude: 37.8044,
     longitude: -122.2712,
     address: 'Sample data — no real address',
+    farm_type: 'verified_farm',
+    location_precision: 'exact',
     is_active: true,
     is_demo: true,
     created_at: NOW,
@@ -119,9 +121,15 @@ export const previewFarms: Farm[] = [
     slug: 'preview-marsh-lane',
     description: 'Sample data for design review. Not a real farm.',
     created_by: null,
-    latitude: 37.7599,
-    longitude: -122.4148,
-    address: 'Sample data — no real address',
+    // Deliberately NULL: a city-precision grower has no pin, and preview mode
+    // should show that case rather than only the happy one.
+    latitude: null,
+    longitude: null,
+    address: 'Oakland, CA — sample data, no real address',
+    // A community grower at city precision — the coarse-location case the map
+    // and every future pin renderer has to handle.
+    farm_type: 'individual',
+    location_precision: 'city',
     is_active: true,
     is_demo: true,
     created_at: NOW,
@@ -174,7 +182,9 @@ export const PREVIEW_SCREENS: { path: string; title: string; note: string }[] = 
   {
     path: '/(app)/apply',
     title: 'Farmer application',
-    note: 'What a NON-farmer gets from the right toggle. Placeholder — Step 2 builds the form.',
+    note:
+      'What a NON-farmer gets from the right toggle. Real Step-2A flow: tier choice, form, ' +
+      'review/rejected/approved states. Preview has no backend, so nothing submits.',
   },
   { path: '/setup', title: 'Setup', note: 'Shown when Supabase is not configured.' },
 ];

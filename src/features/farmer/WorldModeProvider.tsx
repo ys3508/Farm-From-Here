@@ -41,6 +41,12 @@ type WorldModeValue = {
   /** The farmer's farm name, once loaded. Null for a consumer, never invented. */
   farmName: string | null;
   /**
+   * Re-read the gate. Call it after an approval: the farm and its first photo
+   * appear in the same instant, and without this the tabs stay locked until the
+   * app is restarted.
+   */
+  refreshGate: () => Promise<void>;
+  /**
    * Ask for a world. A non-farmer asking for 'farmer-world' is routed to the
    * application entry instead and `activeWorld` does not change.
    */
@@ -49,13 +55,17 @@ type WorldModeValue = {
 
 const WorldModeContext = createContext<WorldModeValue | null>(null);
 
-/** Where a non-farmer's right toggle goes. Stubbed until Step 2 builds it. */
+/**
+ * Where a non-farmer's right toggle goes — the REAL application flow as of
+ * Step 2A. This is the single canonical entry to becoming a farmer; there is
+ * deliberately no second "apply" door anywhere in the app.
+ */
 const APPLICATION_ROUTE = '/(app)/apply';
 
 export function WorldModeProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { profile } = useAuth();
-  const { isFarmer, farmName, loading } = useFarmerMembership(profile?.id);
+  const { isFarmer, farmName, loading, reload } = useFarmerMembership(profile?.id);
 
   const [activeWorld, setActiveWorld] = useState<WorldMode>(DEFAULT_WORLD);
 
@@ -83,9 +93,10 @@ export function WorldModeProvider({ children }: { children: React.ReactNode }) {
       isFarmer,
       gateLoading: loading,
       farmName,
+      refreshGate: reload,
       requestWorld,
     }),
-    [effectiveWorld, isFarmer, loading, farmName, requestWorld],
+    [effectiveWorld, isFarmer, loading, farmName, reload, requestWorld],
   );
 
   return <WorldModeContext.Provider value={value}>{children}</WorldModeContext.Provider>;
