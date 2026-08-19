@@ -4,6 +4,7 @@ import { ActivityIndicator, StyleSheet, View, type ColorValue } from 'react-nati
 import { TAB_BAR_HEIGHT } from '@/config/myWorld';
 import { BrandText, brandColors, brandSpacing } from '@/design/brand';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { WorldModeProvider, useWorldMode } from '@/features/farmer';
 
 /**
  * Protected area. Everything under (app) requires a session — including a Guest
@@ -34,6 +35,33 @@ import { useAuth } from '@/features/auth/AuthProvider';
  * LEFT; the two SHARED SOCIAL tabs (Quest, Community) sit on the RIGHT with Me.
  * That grouping is what lets the Farmer World toggle animate only the left half
  * of the bar. Please do not "tidy" Quest back to slot 2.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * TWO BARS, FIVE SLOTS, ONE NAVIGATOR
+ * (revise/2026-08-19-farmer-world-and-tabs.md, Task 2)
+ *
+ *   My World   │ My World │ Farm     │ Quest │ Community │ Me
+ *   Farmer     │ My Farm  │ Post     │ Quest │ Community │ Me
+ *                ▲ slot 1   ▲ slot 2   ▲──── identical ────▲
+ *
+ * ONLY SLOTS 1 AND 2 CHANGE. Quest, Community and Me are the SAME screens, not
+ * forks and not copies — they are declared once, and crossing between worlds
+ * never touches them, so they do not remount and lose their state.
+ *
+ * How that is achieved matters, so: this is ONE navigator with every screen
+ * declared once, and world switching only flips `href` on `farm` / `post`.
+ * `href: null` hides a tab button without unregistering the route, so the
+ * remaining buttons keep their declared order — which is why `post` is declared
+ * immediately after `farm` rather than at the end.
+ *
+ * Slot 1 does not even change route: My World and My Farm are two panels of the
+ * SAME canvas screen (app/(app)/world.tsx), so only the label and the icon move.
+ *
+ * `activeWorld` from WorldModeProvider is the single source of truth for which
+ * of the two bars is showing; the canvas derives its pan position from the same
+ * value. A profile with no `farm_members` row can never reach 'farmer-world',
+ * so a pure consumer sees the top row and nothing else — no farmer tabs, no
+ * farmer screens, no hints.
  * ────────────────────────────────────────────────────────────────────────────
  */
 export default function AppLayout() {
@@ -49,6 +77,21 @@ export default function AppLayout() {
 
   if (!session) return <Redirect href="/(auth)/sign-in" />;
 
+  // Above the navigator, because the bar itself reads it.
+  return (
+    <WorldModeProvider>
+      <AppTabs />
+    </WorldModeProvider>
+  );
+}
+
+function AppTabs() {
+  const { activeWorld } = useWorldMode();
+  const inFarmerWorld = activeWorld === 'farmer-world';
+
+  /** `href: null` hides a tab; spreading nothing leaves the default in place. */
+  const hiddenWhen = (hidden: boolean): { href: null } | null => (hidden ? { href: null } : null);
+
   return (
     <Tabs
       screenOptions={{
@@ -59,21 +102,41 @@ export default function AppLayout() {
       }}
     >
       {/* Declaration order here IS the order of the bar.
-          My World is first, and therefore the tab the app opens on. */}
+          My World is first, and therefore the tab the app opens on.
+
+          SLOT 1 — one route, two faces. Both worlds are panels of this same
+          screen, so switching changes the label and the glyph and nothing else;
+          the canvas is never remounted and the pan is never interrupted. */}
       <Tabs.Screen
         name="world"
         options={{
-          tabBarLabel: ({ color }) => <TabLabel title="My World" color={color} />,
-          tabBarIcon: ({ color }) => <TabGlyph glyph="🏜️" color={color} />,
-          tabBarAccessibilityLabel: 'My World',
+          tabBarLabel: ({ color }) => (
+            <TabLabel title={inFarmerWorld ? 'My Farm' : 'My World'} color={color} />
+          ),
+          tabBarIcon: ({ color }) => <TabGlyph glyph={inFarmerWorld ? '🚜' : '🏜️'} color={color} />,
+          tabBarAccessibilityLabel: inFarmerWorld ? 'My Farm' : 'My World',
         }}
       />
+
+      {/* SLOT 2 — the main action, mirrored. Consumer: Farm, where Seeds are
+          SPENT on something real. Farmer: Post, the ~30-second update. Exactly
+          one of the two is in the bar at any moment. */}
       <Tabs.Screen
         name="farm"
         options={{
+          ...hiddenWhen(inFarmerWorld),
           tabBarLabel: ({ color }) => <TabLabel title="Farm" kicker="USE SEEDS" color={color} />,
           tabBarIcon: ({ color }) => <TabGlyph glyph="🧑‍🌾" color={color} />,
           tabBarAccessibilityLabel: 'Farm — use Seeds',
+        }}
+      />
+      <Tabs.Screen
+        name="post"
+        options={{
+          ...hiddenWhen(!inFarmerWorld),
+          tabBarLabel: ({ color }) => <TabLabel title="Post" kicker="PRODUCE" color={color} />,
+          tabBarIcon: ({ color }) => <TabGlyph glyph="📷" color={color} />,
+          tabBarAccessibilityLabel: 'Post an update',
         }}
       />
       <Tabs.Screen
@@ -103,6 +166,15 @@ export default function AppLayout() {
 
       {/* Route kept, tab removed — see the note above. */}
       <Tabs.Screen name="map" options={{ href: null }} />
+
+      {/* Reachable, but never a tab.
+          `apply` is where a NON-farmer's right toggle goes. The three farmer
+          management screens are reached from inside My Farm — the spec is
+          explicit that they do NOT get bottom tabs of their own. */}
+      <Tabs.Screen name="apply" options={{ href: null }} />
+      <Tabs.Screen name="plot-new" options={{ href: null }} />
+      <Tabs.Screen name="adoptable-new" options={{ href: null }} />
+      <Tabs.Screen name="farm-profile" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -59,6 +59,40 @@ export const previewProfile: Profile = {
 };
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════
+ * IS THE PREVIEW ACCOUNT A FARMER?
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * The Farmer World (revise/2026-08-19-farmer-world-and-tabs.md) only exists for
+ * a profile with a `farm_members` row, so preview mode has to pick a side. It
+ * defaults to FARMER, because that is the side with screens to review — the
+ * whole two-panel canvas and the farmer tab bar are invisible otherwise.
+ *
+ * To review the pure-consumer side instead (no Farmer World, right toggle opens
+ * the application entry), put this in .env.local and restart with -c:
+ *
+ *     EXPO_PUBLIC_PREVIEW_FARMER=false
+ *
+ * The application entry stays reachable from the /dev index either way.
+ */
+export const previewIsFarmer = process.env.EXPO_PUBLIC_PREVIEW_FARMER !== 'false';
+
+/**
+ * The fake `farm_members` answer. Points at the sample farm below, whose name
+ * begins with "PREVIEW —" so a screenshot of the farmer dashboard can never be
+ * mistaken for a real signed farm (CLAUDE.md invariant 6).
+ */
+export const previewFarmMembership: {
+  member: { id: string; farm_id: string; role: 'owner' | 'farmer' | 'staff' } | null;
+  farmName: string | null;
+} = previewIsFarmer
+  ? {
+      member: { id: 'preview-membership-1', farm_id: 'preview-farm-1', role: 'owner' },
+      farmName: 'PREVIEW — Willow Bend Orchard',
+    }
+  : { member: null, farmName: null };
+
+/**
  * Sample farms. Named so nobody can mistake them for signed farms — CLAUDE.md
  * invariant 6 forbids presenting invented farm data as real, and the whole
  * point of preview mode is that it is obviously not real.
@@ -127,5 +161,15 @@ export const PREVIEW_SCREENS: { path: string; title: string; note: string }[] = 
     note: 'Stylised map with real distance text. Route kept, but no longer a tab.',
   },
   { path: '/(app)/profile', title: 'Profile', note: 'Avatar, username, referral code, sign out.' },
+  {
+    path: '/(app)/post',
+    title: 'Post (farmer)',
+    note: 'Farmer tab slot 2. Placeholder — the real 30-second update flow is Step 2.',
+  },
+  {
+    path: '/(app)/apply',
+    title: 'Farmer application',
+    note: 'What a NON-farmer gets from the right toggle. Placeholder — Step 2 builds the form.',
+  },
   { path: '/setup', title: 'Setup', note: 'Shown when Supabase is not configured.' },
 ];
